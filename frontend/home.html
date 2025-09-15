@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home - Barbearia</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+      .header {
+        background-color: #343a40;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .menu-buttons .btn {
+        width: 70%;
+        height: 120px;
+        font-size: 20px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+      .calendar-container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">Barbearia - Mrs Barbearia</div>
+
+    <div class="container mt-4">
+      <div class="row menu-buttons text-center">
+        <div class="col-md-6">
+          <a href="serviços.html">
+            <button class="btn btn-dark">
+              <i class="bi bi-scissors me-2"></i> Serviços
+            </button>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="clientes.html">
+            <button class="btn btn-dark">
+              <i class="bi bi-people-fill me-2"></i> Clientes
+            </button>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="agendamento.html">
+            <button class="btn btn-dark">
+              <i class="bi bi-calendar-check me-2"></i> Agendamentos
+            </button>
+          </a>
+        </div>
+        <div class="col-md-6">
+          <a href="relAgendamento.html">
+            <button class="btn btn-dark">
+              <i class="bi bi-bar-chart-fill me-2"></i> Relatório
+            </button>
+          </a>
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="calendar-container">
+            <div id="calendar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Agendamento -->
+    <div
+      class="modal fade"
+      id="modalAgendamento"
+      tabindex="-1"
+      aria-labelledby="modalAgendamentoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalAgendamentoLabel">
+              Agendar Horário
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="formAgendamento">
+              <div class="mb-3">
+                <label class="form-label">Cliente</label>
+                <select class="form-select" id="cliente" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Barbeiro</label>
+                <select class="form-select" id="barbeiro" required>
+                  <option value="">Selecione</option>
+                  <option value="Vand">Vand</option>
+                  <option value="João">João</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Serviço</label>
+                <select class="form-select" id="servico" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Data</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="dataSelecionada"
+                  readonly
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Horário</label>
+                <select class="form-select" id="horario" required></select>
+              </div>
+              <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script>
+      const apiUrl = "http://localhost:3000";
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "login.html";
+      }
+      let agendamentos = JSON.parse(localStorage.getItem("agendamentos")) || [];
+
+      function carregarClientesEServicos() {
+        const clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+        const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+
+        const clienteSelect = document.getElementById("cliente");
+        const servicoSelect = document.getElementById("servico");
+
+        clienteSelect.innerHTML = clientes.length
+          ? clientes
+              .map((c) => `<option value="${c.nome}">${c.nome}</option>`)
+              .join("")
+          : `<option value="">Nenhum cliente cadastrado</option>`;
+
+        servicoSelect.innerHTML = servicos.length
+          ? servicos
+              .map(
+                (s) =>
+                  `<option value="${s.nome}" data-valor="${s.valor}" data-duracao="${s.duracao}">
+              ${s.nome} (${s.duracao} min)
+            </option>`
+              )
+              .join("")
+          : `<option value="">Nenhum serviço cadastrado</option>`;
+      }
+
+      function gerarHorariosDisponiveis(data, barbeiro, duracao) {
+        const inicioExpediente = 8;
+        const fimExpediente = 18;
+        const horariosDisponiveis = [];
+
+        for (let hora = inicioExpediente; hora < fimExpediente; hora++) {
+          for (let minuto of [0, 30]) {
+            const inicio = `${String(hora).padStart(2, "0")}:${String(
+              minuto
+            ).padStart(2, "0")}`;
+            const fimDate = new Date(`${data}T${inicio}`);
+            fimDate.setMinutes(fimDate.getMinutes() + parseInt(duracao));
+            const fim = `${String(fimDate.getHours()).padStart(
+              2,
+              "0"
+            )}:${String(fimDate.getMinutes()).padStart(2, "0")}`;
+
+            const conflito = agendamentos.some(
+              (a) =>
+                a.barbeiro === barbeiro &&
+                a.data === data &&
+                !(fim <= a.inicio || inicio >= a.fim)
+            );
+
+            if (!conflito && fimDate.getHours() < fimExpediente) {
+              horariosDisponiveis.push(inicio);
+            }
+          }
+        }
+        return horariosDisponiveis;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const calendar = new FullCalendar.Calendar(
+          document.getElementById("calendar"),
+          {
+            initialView: "dayGridMonth",
+            locale: "pt-br",
+            selectable: true,
+            dateClick: function (info) {
+              carregarClientesEServicos();
+              document.getElementById("dataSelecionada").value = info.dateStr;
+              const modal = new bootstrap.Modal(
+                document.getElementById("modalAgendamento")
+              );
+              modal.show();
+            },
+          }
+        );
+        calendar.render();
+
+        function atualizarHorarios() {
+          const data = document.getElementById("dataSelecionada").value;
+          const barbeiro = document.getElementById("barbeiro").value;
+          const servicoSelect =
+            document.getElementById("servico").selectedOptions[0];
+          const duracao = servicoSelect ? servicoSelect.dataset.duracao : 0;
+
+          if (data && barbeiro && duracao) {
+            const horarios = gerarHorariosDisponiveis(data, barbeiro, duracao);
+            const select = document.getElementById("horario");
+            select.innerHTML = horarios
+              .map((h) => `<option value="${h}">${h}</option>`)
+              .join("");
+          }
+        }
+
+        document
+          .getElementById("barbeiro")
+          .addEventListener("change", atualizarHorarios);
+        document
+          .getElementById("servico")
+          .addEventListener("change", atualizarHorarios);
+
+        document
+          .getElementById("formAgendamento")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const cliente = document.getElementById("cliente").value;
+            const barbeiro = document.getElementById("barbeiro").value;
+            const servicoSelect =
+              document.getElementById("servico").selectedOptions[0];
+            const servico = servicoSelect.value;
+            const valor = servicoSelect.dataset.valor;
+            const duracao = servicoSelect.dataset.duracao;
+            const data = document.getElementById("dataSelecionada").value;
+            const horario = document.getElementById("horario").value;
+
+            const fimDate = new Date(`${data}T${horario}`);
+            fimDate.setMinutes(fimDate.getMinutes() + parseInt(duracao));
+            const fim = `${String(fimDate.getHours()).padStart(
+              2,
+              "0"
+            )}:${String(fimDate.getMinutes()).padStart(2, "0")}`;
+
+            const novoAgendamento = {
+              numero: agendamentos.length + 1,
+              data,
+              inicio: horario,
+              fim,
+              barbeiro,
+              servico,
+              valor,
+              duracao,
+              cliente,
+              realizado: "Não",
+            };
+
+            agendamentos.push(novoAgendamento);
+            localStorage.setItem("agendamentos", JSON.stringify(agendamentos));
+
+            alert(
+              `Agendamento criado para ${cliente}, ${servico} com ${barbeiro} às ${horario}`
+            );
+
+            bootstrap.Modal.getInstance(
+              document.getElementById("modalAgendamento")
+            ).hide();
+          });
+      });
+    </script>
+  </body>
+</html>

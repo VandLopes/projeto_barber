@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciar Clientes - Barbearia</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-light">
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- Botão Home -->
+        <a href="home.html" class="btn btn-outline-primary">
+          <i class="bi bi-house-door-fill"></i> Home
+        </a>
+
+        <h2 class="fw-bold">Clientes</h2>
+
+        <!-- Botões de ação -->
+        <div>
+          <button class="btn btn-outline-secondary me-2" id="exportarExcel">
+            <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+          </button>
+          <button
+            class="btn btn-success"
+            data-bs-toggle="modal"
+            data-bs-target="#modalCliente"
+          >
+            <i class="bi bi-plus-lg"></i> Novo Cliente
+          </button>
+        </div>
+      </div>
+
+      <!-- Campo de pesquisa -->
+      <div class="mb-3">
+        <input
+          type="text"
+          class="form-control"
+          id="pesquisa"
+          placeholder="Pesquisar cliente..."
+        />
+      </div>
+
+      <!-- Tabela de clientes -->
+      <table class="table table-hover table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="listaClientes"></tbody>
+      </table>
+    </div>
+
+    <!-- Modal de cadastro/edição -->
+    <div
+      class="modal fade"
+      id="modalCliente"
+      tabindex="-1"
+      aria-labelledby="modalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalLabel">Novo Cliente</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="mb-3">
+                <label for="nomeCliente" class="form-label">Nome</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="nomeCliente"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="emailCliente" class="form-label">Email</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="emailCliente"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="telefoneCliente" class="form-label">Telefone</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="telefoneCliente"
+                  placeholder="(XX) XXXXX-XXXX"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary w-100">
+                Salvar
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      const apiUrl = "http://localhost:3000";
+      const token = localStorage.getItem("token");
+
+      // Se não estiver logado, volta pro login
+      if (!token) {
+        window.location.href = "login.html";
+      }
+
+      // Filtro de pesquisa
+      document
+        .getElementById("pesquisa")
+        .addEventListener("keyup", function () {
+          let valor = this.value.toLowerCase();
+          document
+            .querySelectorAll("#listaClientes tr")
+            .forEach(function (linha) {
+              linha.style.display = linha.textContent
+                .toLowerCase()
+                .includes(valor)
+                ? ""
+                : "none";
+            });
+        });
+
+      // Exportar Excel (CSV)
+      document
+        .getElementById("exportarExcel")
+        .addEventListener("click", function () {
+          let tabela = document.querySelector("table");
+          let linhas = tabela.querySelectorAll("tr");
+          let csv = [];
+
+          linhas.forEach((row) => {
+            let cols = row.querySelectorAll("th, td");
+            let dados = [];
+            cols.forEach((col) => dados.push(col.innerText));
+            csv.push(dados.join(";"));
+          });
+
+          let blob = new Blob([csv.join("\n")], {
+            type: "text/csv;charset=utf-8;",
+          });
+          let link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "clientes.csv";
+          link.click();
+        });
+
+      // Submeter formulário
+      document.querySelector("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const nome = document.getElementById("nomeCliente").value;
+        const email = document.getElementById("emailCliente").value;
+        const telefone = document.getElementById("telefoneCliente").value;
+
+        const metodo = clienteEmEdicao ? "PUT" : "POST";
+        const url = clienteEmEdicao
+          ? `${apiUrl}/clientes/${clienteEmEdicao}`
+          : `${apiUrl}/clientes`;
+
+        const response = await fetch(url, {
+          method: metodo,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // 🔑 JWT
+          },
+          body: JSON.stringify({ nome, email, telefone }),
+        });
+
+        const data = await response.json();
+        alert(data.message);
+        clienteEmEdicao = null;
+
+        carregarClientes();
+
+        // fecha o modal
+        bootstrap.Modal.getInstance(
+          document.getElementById("modalCliente")
+        ).hide();
+
+        // limpa os campos
+        document.getElementById("nomeCliente").value = "";
+        document.getElementById("emailCliente").value = "";
+        document.getElementById("telefoneCliente").value = "";
+      });
+
+      // Carregar clientes
+      async function carregarClientes() {
+        const res = await fetch(`${apiUrl}/clientes`, {
+          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          alert("Sessão expirada. Faça login novamente.");
+          localStorage.removeItem("token");
+          window.location.href = "login.html";
+          return;
+        }
+
+        const clientes = await res.json();
+
+        const tbody = document.getElementById("listaClientes");
+        tbody.innerHTML = "";
+
+        clientes.forEach((cliente) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td>${cliente.nome}</td>
+        <td>${cliente.email}</td>
+        <td>${cliente.telefone}</td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editarCliente(${cliente.id})">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="excluirCliente(${cliente.id})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", carregarClientes);
+
+      let clienteEmEdicao = null;
+
+      // Editar cliente
+      function editarCliente(id) {
+        fetch(`${apiUrl}/clientes`, {
+          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
+        })
+          .then((res) => res.json())
+          .then((clientes) => {
+            const cliente = clientes.find((c) => c.id === id);
+            if (!cliente) return alert("Cliente não encontrado.");
+
+            document.getElementById("nomeCliente").value = cliente.nome;
+            document.getElementById("emailCliente").value = cliente.email;
+            document.getElementById("telefoneCliente").value = cliente.telefone;
+
+            clienteEmEdicao = cliente.id;
+
+            const modal = new bootstrap.Modal(
+              document.getElementById("modalCliente")
+            );
+            modal.show();
+          });
+      }
+
+      // Excluir cliente
+      function excluirCliente(id) {
+        if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+
+        fetch(`${apiUrl}/clientes/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            alert(data.message);
+            carregarClientes();
+          })
+          .catch((err) => {
+            console.error(err);
+            alert("Erro ao excluir cliente.");
+          });
+      }
+    </script>
+  </body>
+</html>
