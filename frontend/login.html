@@ -165,6 +165,8 @@
 
     <!-- Script de login -->
     <script>
+      /*
+
       const apiUrl = "http://localhost:3000";
 
       // Login
@@ -216,6 +218,46 @@
             alert(data.error);
           }
         });
+
+
+        */
+
+      // Usuário "fake" só para apresentação
+      const usuarioFake = {
+        email: "vanderleilopes23.vl@gmail.com",
+        senha: "123456",
+        nome: "Administrador",
+      };
+
+      // Login simulado
+      document.getElementById("btnEntrar").addEventListener("click", () => {
+        const email = document.getElementById("emailLogin").value;
+        const senha = document.getElementById("senhaLogin").value;
+
+        if (email === usuarioFake.email && senha === usuarioFake.senha) {
+          // Simula o token JWT
+          const fakeToken = "token-de-apresentacao";
+          localStorage.setItem("token", fakeToken);
+
+          document.getElementById("mensagem").innerHTML =
+            '<span class="text-success">Login realizado!</span>';
+
+          setTimeout(() => (window.location.href = "home.html"), 1000);
+        } else {
+          document.getElementById("mensagem").innerHTML =
+            '<span class="text-danger">Email ou senha incorretos!</span>';
+        }
+      });
+
+      // Registro simulado (não salva de verdade)
+      document.getElementById("btnRegistrar").addEventListener("click", () => {
+        alert(
+          "Cadastro simulado! Usuário pode fazer login com: admin@teste.com / 1234"
+        );
+        bootstrap.Modal.getInstance(
+          document.getElementById("modalRegistrar")
+        ).hide();
+      });
     </script>
   </body>
 </html>
