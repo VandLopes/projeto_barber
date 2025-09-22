@@ -27,6 +27,12 @@
         text-align: center;
         font-size: 24px;
         font-weight: bold;
+        position: relative;
+      }
+      .btn-logout {
+        position: absolute;
+        top: 20px;
+        right: 20px;
       }
       .menu-buttons .btn {
         width: 70%;
@@ -44,7 +50,10 @@
     </style>
   </head>
   <body>
-    <div class="header">Barbearia - Mrs Barbearia</div>
+    <div class="header">
+      Barbearia - Mrs Barbearia
+      <button id="btnLogout" class="btn btn-danger btn-logout">Logout</button>
+    </div>
 
     <div class="container mt-4">
       <div class="row menu-buttons text-center">
@@ -144,14 +153,23 @@
         </div>
       </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <script>
-      const apiUrl = "http://localhost:3000";
+      // Proteção da página: se não houver token, redireciona para login
       const token = localStorage.getItem("token");
       if (!token) {
         window.location.href = "login.html";
       }
+
+      // Logout
+      document.getElementById("btnLogout").addEventListener("click", () => {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      });
+
+      // Dados de agendamento
       let agendamentos = JSON.parse(localStorage.getItem("agendamentos")) || [];
 
       function carregarClientesEServicos() {
