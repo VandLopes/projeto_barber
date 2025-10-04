@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -5,16 +7,18 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 const port = 3000;
-const SECRET = "chave_secreta"; // troque em produção
+
+const SECRET = process.env.JWT_SECRET;
 
 app.use(cors());
 app.use(express.json());
+
+const authRoutes = require("./routes/authRoutes");
 
 // rotas
 const clientesRoutes = require("./routes/clientes");
 const servicosRoutes = require("./routes/servicos");
 const agendamentosRoutes = require("./routes/agendamentos");
-const usuariosRoutes = require("./routes/usuarios");
 
 // middleware de autenticação
 function autenticar(req, res, next) {
@@ -30,11 +34,15 @@ function autenticar(req, res, next) {
   });
 }
 
-// aplica autenticação onde precisar
+// 1️⃣ Aplica rotas de autenticação (públicas)
+
+app.use("/auth", authRoutes);
+
+// 2️⃣ Aplica rotas protegidas (exigem token)
+
 app.use("/clientes", autenticar, clientesRoutes);
 app.use("/servicos", autenticar, servicosRoutes);
 app.use("/agendamentos", autenticar, agendamentosRoutes);
-app.use("/usuarios", usuariosRoutes);
 
 // 🚀 Servir os arquivos da pasta frontend
 app.use(express.static(path.join(__dirname, "../frontend")));

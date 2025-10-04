@@ -120,177 +120,54 @@
       </div>
     </div>
 
+    <!-- Modal de confirmar/exclusão -->
+    <div
+      class="modal fade"
+      id="modalConfirmacaoExclusao"
+      tabindex="-1"
+      aria-labelledby="modalConfirmacaoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalConfirmacaoLabel">
+              Confirmação de Exclusão
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            Tem certeza que deseja excluir este cliente? Esta ação não pode ser
+            desfeita.
+          </div>
+          <div class="modal-footer">
+            <!-- Botão para fechar sem excluir -->
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+
+            <!-- Botão de Confirmação (ID crucial para o JS) -->
+            <button
+              type="button"
+              class="btn btn-danger"
+              id="btnConfirmarExclusao"
+            >
+              Sim, Excluir Cliente
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      const apiUrl = "http://localhost:3000";
-      const token = localStorage.getItem("token");
-
-      // Se não estiver logado, volta pro login
-      if (!token) {
-        window.location.href = "login.html";
-      }
-
-      // Filtro de pesquisa
-      document
-        .getElementById("pesquisa")
-        .addEventListener("keyup", function () {
-          let valor = this.value.toLowerCase();
-          document
-            .querySelectorAll("#listaClientes tr")
-            .forEach(function (linha) {
-              linha.style.display = linha.textContent
-                .toLowerCase()
-                .includes(valor)
-                ? ""
-                : "none";
-            });
-        });
-
-      // Exportar Excel (CSV)
-      document
-        .getElementById("exportarExcel")
-        .addEventListener("click", function () {
-          let tabela = document.querySelector("table");
-          let linhas = tabela.querySelectorAll("tr");
-          let csv = [];
-
-          linhas.forEach((row) => {
-            let cols = row.querySelectorAll("th, td");
-            let dados = [];
-            cols.forEach((col) => dados.push(col.innerText));
-            csv.push(dados.join(";"));
-          });
-
-          let blob = new Blob([csv.join("\n")], {
-            type: "text/csv;charset=utf-8;",
-          });
-          let link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = "clientes.csv";
-          link.click();
-        });
-
-      // Submeter formulário
-      document.querySelector("form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const nome = document.getElementById("nomeCliente").value;
-        const email = document.getElementById("emailCliente").value;
-        const telefone = document.getElementById("telefoneCliente").value;
-
-        const metodo = clienteEmEdicao ? "PUT" : "POST";
-        const url = clienteEmEdicao
-          ? `${apiUrl}/clientes/${clienteEmEdicao}`
-          : `${apiUrl}/clientes`;
-
-        const response = await fetch(url, {
-          method: metodo,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // 🔑 JWT
-          },
-          body: JSON.stringify({ nome, email, telefone }),
-        });
-
-        const data = await response.json();
-        alert(data.message);
-        clienteEmEdicao = null;
-
-        carregarClientes();
-
-        // fecha o modal
-        bootstrap.Modal.getInstance(
-          document.getElementById("modalCliente")
-        ).hide();
-
-        // limpa os campos
-        document.getElementById("nomeCliente").value = "";
-        document.getElementById("emailCliente").value = "";
-        document.getElementById("telefoneCliente").value = "";
-      });
-
-      // Carregar clientes
-      async function carregarClientes() {
-        const res = await fetch(`${apiUrl}/clientes`, {
-          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
-        });
-
-        if (res.status === 401 || res.status === 403) {
-          alert("Sessão expirada. Faça login novamente.");
-          localStorage.removeItem("token");
-          window.location.href = "login.html";
-          return;
-        }
-
-        const clientes = await res.json();
-
-        const tbody = document.getElementById("listaClientes");
-        tbody.innerHTML = "";
-
-        clientes.forEach((cliente) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-        <td>${cliente.nome}</td>
-        <td>${cliente.email}</td>
-        <td>${cliente.telefone}</td>
-        <td>
-          <button class="btn btn-warning btn-sm" onclick="editarCliente(${cliente.id})">
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="excluirCliente(${cliente.id})">
-            <i class="bi bi-trash"></i>
-          </button>
-        </td>
-      `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      document.addEventListener("DOMContentLoaded", carregarClientes);
-
-      let clienteEmEdicao = null;
-
-      // Editar cliente
-      function editarCliente(id) {
-        fetch(`${apiUrl}/clientes`, {
-          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
-        })
-          .then((res) => res.json())
-          .then((clientes) => {
-            const cliente = clientes.find((c) => c.id === id);
-            if (!cliente) return alert("Cliente não encontrado.");
-
-            document.getElementById("nomeCliente").value = cliente.nome;
-            document.getElementById("emailCliente").value = cliente.email;
-            document.getElementById("telefoneCliente").value = cliente.telefone;
-
-            clienteEmEdicao = cliente.id;
-
-            const modal = new bootstrap.Modal(
-              document.getElementById("modalCliente")
-            );
-            modal.show();
-          });
-      }
-
-      // Excluir cliente
-      function excluirCliente(id) {
-        if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
-
-        fetch(`${apiUrl}/clientes/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            alert(data.message);
-            carregarClientes();
-          })
-          .catch((err) => {
-            console.error(err);
-            alert("Erro ao excluir cliente.");
-          });
-      }
-    </script>
+    <script src="js/clientes.js"></script>
   </body>
 </html>

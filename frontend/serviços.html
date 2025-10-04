@@ -123,168 +123,55 @@
       </div>
     </div>
 
+    <!-- Modal de confirmar/exclusão -->
+    <div
+      class="modal fade"
+      id="modalConfirmacaoExclusao"
+      tabindex="-1"
+      aria-labelledby="modalConfirmacaoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalConfirmacaoLabel">
+              Confirmação de Exclusão
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            Tem certeza que deseja excluir este serviço? Esta ação não pode ser
+            desfeita.
+          </div>
+          <div class="modal-footer">
+            <!-- Botão para fechar sem excluir -->
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+
+            <!-- Botão de Confirmação (ID crucial para o JS) -->
+            <button
+              type="button"
+              class="btn btn-danger"
+              id="btnConfirmarExclusao"
+            >
+              Sim, Excluir Serviço
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      const apiUrl = "http://localhost:3000";
-      const token = localStorage.getItem("token");
-
-      // se não estiver logado, volta pro login
-      if (!token) {
-        window.location.href = "login.html";
-      }
-      // Filtro de pesquisa
-      document
-        .getElementById("pesquisa")
-        .addEventListener("keyup", function () {
-          let valor = this.value.toLowerCase();
-          document
-            .querySelectorAll("#listaServicos tr")
-            .forEach(function (linha) {
-              linha.style.display = linha.textContent
-                .toLowerCase()
-                .includes(valor)
-                ? ""
-                : "none";
-            });
-        });
-
-      // Exportar Excel (simples usando CSV)
-      document
-        .querySelector(".btn-outline-secondary")
-        .addEventListener("click", function () {
-          let tabela = document.querySelector("table");
-          let linhas = tabela.querySelectorAll("tr");
-          let csv = [];
-
-          linhas.forEach((row) => {
-            let cols = row.querySelectorAll("th, td");
-            let dados = [];
-            cols.forEach((col) => dados.push(col.innerText));
-            csv.push(dados.join(";"));
-          });
-
-          let blob = new Blob([csv.join("\n")], {
-            type: "text/csv;charset=utf-8;",
-          });
-          let link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = "servicos.csv";
-          link.click();
-        });
-
-      // Enviar novo serviço
-      document.querySelector("form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const nome = document.getElementById("nomeServico").value;
-        const preco = document
-          .getElementById("precoServico")
-          .value.replace(",", ".");
-        const duracao = parseInt(
-          document.getElementById("duracaoServico").value
-        );
-
-        const metodo = servicoEmEdicao ? "PUT" : "POST";
-        const url = servicoEmEdicao
-          ? `http://localhost:3000/servicos/${servicoEmEdicao}`
-          : "http://localhost:3000/servicos";
-
-        const response = await fetch(url, {
-          method: metodo,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nome, preco, duracao }),
-        });
-
-        const data = await response.json();
-        alert(data.message);
-        servicoEmEdicao = null;
-
-        carregarServicos();
-
-        bootstrap.Modal.getInstance(
-          document.getElementById("modalServico")
-        ).hide();
-
-        document.getElementById("nomeServico").value = "";
-        document.getElementById("precoServico").value = "";
-        document.getElementById("duracaoServico").value = "";
-      });
-
-      // Carregar serviços
-      async function carregarServicos() {
-        const res = await fetch("http://localhost:3000/servicos");
-        const servicos = await res.json();
-
-        const tbody = document.getElementById("listaServicos");
-        tbody.innerHTML = "";
-
-        servicos.forEach((servico) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-                    <td>${servico.nome}</td>
-                    <td>R$ ${servico.preco.toFixed(2)}</td>
-                    <td>${servico.duracao} min</td>
-                    <td>
-                      <button class="btn btn-warning btn-sm" onclick="editarServico(${
-                        servico.id
-                      })">
-                        <i class="bi bi-pencil"></i>
-                      </button>
-                      <button class="btn btn-danger btn-sm " onclick="excluirServico(${
-                        servico.id
-                      })">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      document.addEventListener("DOMContentLoaded", carregarServicos);
-
-      // função editar serviço
-
-      let servicoEmEdicao = null;
-
-      function editarServico(id) {
-        fetch(`http://localhost:3000/servicos`)
-          .then((res) => res.json())
-          .then((servicos) => {
-            const servico = servicos.find((s) => s.id === id);
-            if (!servico) return alert("Serviço não encontrado.");
-
-            document.getElementById("nomeServico").value = servico.nome;
-            document.getElementById("precoServico").value = servico.preco;
-            document.getElementById("duracaoServico").value = servico.duracao;
-
-            servicoEmEdicao = servico.id;
-
-            const modal = new bootstrap.Modal(
-              document.getElementById("modalServico")
-            );
-            modal.show();
-          });
-      }
-
-      // função excluir serviço
-
-      function excluirServico(id) {
-        if (!confirm("Deseja realmente excluir este serviço?")) return;
-
-        fetch(`http://localhost:3000/servicos/${id}`, {
-          method: "DELETE",
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            alert(data.message);
-            carregarServicos();
-          })
-          .catch((err) => {
-            console.error(err);
-            alert("Erro ao excluir serviço.");
-          });
-      }
-    </script>
+    <script src="js/servicos.js"></script>
   </body>
 </html>

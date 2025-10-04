@@ -16,13 +16,18 @@ router.get("/", async (req, res) => {
 // Criar serviço
 router.post("/", async (req, res) => {
   try {
-    const { nome, preco, duracao } = req.body;
+    const { nome, preco, duracao_minutos } = req.body;
     const sql = "INSERT INTO servicos (nome, preco, duracao) VALUES (?, ?, ?)";
-    await db.query(sql, [nome, preco, duracao]);
-    res.status(201).json({ message: "Serviço criado com sucesso" });
+
+    const [result] = await db.query(sql, [nome, preco, duracao_minutos]);
+
+    res
+      .status(201)
+      .json({ message: "Serviço criado com sucesso!", id: result.insertId });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao criar serviço" });
+    // Envia uma mensagem de erro útil para o frontend
+    console.error("Erro ao cadastrar serviço:", err);
+    res.status(500).json({ error: "Erro interno ao cadastrar serviço." });
   }
 });
 
@@ -30,14 +35,25 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, preco, duracao } = req.body;
+    const { nome, preco, duracao_minutos } = req.body; // CORREÇÃO: Usando duracao_minutos
+
     const sql =
       "UPDATE servicos SET nome = ?, preco = ?, duracao = ? WHERE id = ?";
-    await db.query(sql, [nome, preco, duracao, id]);
+    const values = [nome, preco, duracao_minutos, id];
+
+    const [result] = await db.query(sql, values);
+
+    // CORREÇÃO: Verifica se alguma linha foi afetada
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ error: "Serviço não encontrado ou não houve alteração." });
+    }
+
     res.json({ message: "Serviço atualizado com sucesso" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao atualizar serviço" });
+    console.error("Erro ao editar serviço:", err);
+    res.status(500).json({ error: "Erro ao editar serviço" });
   }
 });
 
