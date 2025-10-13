@@ -49,7 +49,7 @@ document
     link.click();
   });
 
-// Submeter formulário (Novo ou Edição)
+// Enviar formulário (Novo ou Edição)
 document.querySelector("form").addEventListener("submit", async (e) => {
   e.preventDefault();
 

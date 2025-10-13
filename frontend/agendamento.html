@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gerenciar Agendamentos - Barbearia</title>
+    <!-- Bootstrap CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
+    <!-- Bootstrap Icons -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
       rel="stylesheet"
@@ -16,10 +18,14 @@
   <body class="bg-light">
     <div class="container py-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- Botão Home -->
         <a href="home.html" class="btn btn-outline-primary">
           <i class="bi bi-house-door-fill"></i> Home
         </a>
+
         <h2 class="fw-bold">Agendamentos</h2>
+
+        <!-- Botões de ação -->
         <div>
           <button class="btn btn-outline-secondary me-2" id="exportarExcel">
             <i class="bi bi-file-earmark-excel"></i> Exportar Excel
@@ -58,20 +64,22 @@
         <thead class="table-dark">
           <tr>
             <th>#</th>
-            <th>Data</th>
-            <th>Valor</th>
-            <th>Serviço</th>
-            <th>Duração</th>
+            <th>Data/Hora</th>
             <th>Cliente</th>
+            <th>Serviços</th>
+            <th>Duração Total</th>
+            <th>Valor Total</th>
             <th>Realizado</th>
             <th>Ações</th>
           </tr>
         </thead>
-        <tbody id="listaAgendamentos"></tbody>
+        <tbody id="listaAgendamentos">
+          <!-- Dados serão inseridos aqui pelo JS -->
+        </tbody>
       </table>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal de Cadastro/Edição de Agendamento -->
     <div
       class="modal fade"
       id="modalAgendamento"
@@ -82,7 +90,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="modalLabel">Editar Agendamento</h5>
+            <h5 class="modal-title" id="modalLabel">Agendamento</h5>
             <button
               type="button"
               class="btn-close"
@@ -92,6 +100,7 @@
           </div>
           <div class="modal-body">
             <form id="formAgendamento">
+              <!-- Campo oculto para ID de edição -->
               <input type="hidden" id="indiceEdicao" />
 
               <div class="mb-3">
@@ -106,11 +115,12 @@
 
               <div class="mb-3">
                 <label class="form-label">Serviços</label>
-                <!-- agora múltipla seleção -->
+                <!-- Seleção Múltipla (size=4 para controlar o tamanho visual) -->
                 <select
                   class="form-select"
                   id="servicos"
                   multiple
+                  size="4"
                   required
                 ></select>
                 <small class="text-muted"
@@ -121,6 +131,7 @@
 
               <div class="mb-3">
                 <label class="form-label">Valor Total</label>
+                <!-- Valor e Duração são apenas para visualização do usuário (readonly) -->
                 <input type="text" class="form-control" id="valor" readonly />
               </div>
 
@@ -131,7 +142,12 @@
 
               <div class="mb-3">
                 <label class="form-label">Horário</label>
-                <select class="form-select" id="horario" required></select>
+                <!-- Horários Livres (calculados pelo JS e Backend) -->
+                <select class="form-select" id="horario" required>
+                  <option value="" disabled selected>
+                    Selecione serviço e data
+                  </option>
+                </select>
               </div>
 
               <div class="mb-3">
@@ -143,7 +159,7 @@
               </div>
 
               <button type="submit" class="btn btn-primary w-100">
-                Salvar
+                Salvar Agendamento
               </button>
             </form>
           </div>
@@ -151,135 +167,58 @@
       </div>
     </div>
 
+    <!-- Modal de Confirmação de Exclusão (Usado no JS) -->
+    <div
+      class="modal fade"
+      id="modalConfirmacaoExclusao"
+      tabindex="-1"
+      aria-labelledby="modalConfirmacaoLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalConfirmacaoLabel">
+              Confirmação de Exclusão
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Fechar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            Tem certeza que deseja **excluir** este agendamento? Esta ação não
+            pode ser desfeita.
+          </div>
+          <div class="modal-footer">
+            <!-- Botão para fechar sem excluir -->
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+
+            <!-- Botão de Confirmação (ID crucial para o JS) -->
+            <button
+              type="button"
+              class="btn btn-danger"
+              id="btnConfirmarExclusao"
+            >
+              Sim, Excluir Agendamento
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fim do Modal de Confirmação -->
+
+    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-      const apiUrl = "http://localhost:3000";
-      const token = localStorage.getItem("token");
-
-      // carregar clientes e serviços quando abrir o modal
-      async function carregarClientesEServicos() {
-        // clientes
-        const resClientes = await fetch(apiUrl + "/clientes", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const clientes = await resClientes.json();
-
-        const clienteSelect = document.getElementById("cliente");
-        clienteSelect.innerHTML = clientes
-          .map((c) => `<option value="${c.id}">${c.nome}</option>`)
-          .join("");
-
-        // serviços
-        const resServicos = await fetch(apiUrl + "/servicos", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const servicos = await resServicos.json();
-
-        const servicoSelect = document.getElementById("servicos");
-        servicoSelect.innerHTML = servicos
-          .map(
-            (s) =>
-              `<option value="${s.id}" data-valor="${s.valor}" data-duracao="${s.duracao}">
-            ${s.nome} - R$ ${s.valor} (${s.duracao} min)
-          </option>`
-          )
-          .join("");
-      }
-
-      // atualizar valor e duração totais conforme selecionar serviços
-      document.getElementById("servicos").addEventListener("change", () => {
-        const selected = Array.from(
-          document.getElementById("servicos").selectedOptions
-        );
-        const totalValor = selected.reduce(
-          (acc, opt) => acc + parseFloat(opt.dataset.valor),
-          0
-        );
-        const totalDuracao = selected.reduce(
-          (acc, opt) => acc + parseInt(opt.dataset.duracao),
-          0
-        );
-
-        document.getElementById("valor").value = "R$ " + totalValor.toFixed(2);
-        document.getElementById("duracao").value = totalDuracao + " min";
-
-        // se já tiver data escolhida → carregar horários disponíveis
-        const data = document.getElementById("data").value;
-        if (data) {
-          carregarHorariosDisponiveis(data, totalDuracao);
-        }
-      });
-
-      // carregar horários livres a partir do backend
-      async function carregarHorariosDisponiveis(data, duracao) {
-        const res = await fetch(
-          `${apiUrl}/agendamentos/horarios-livres?data=${data}&duracao=${duracao}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const horarios = await res.json();
-
-        const horarioSelect = document.getElementById("horario");
-        horarioSelect.innerHTML = horarios
-          .map((h) => `<option value="${h}">${h}</option>`)
-          .join("");
-      }
-
-      // sempre que mudar a data → recarregar horários
-      document.getElementById("data").addEventListener("change", () => {
-        const data = document.getElementById("data").value;
-        const totalDuracao = parseInt(
-          document.getElementById("duracao").value.replace(" min", "") || 0
-        );
-        if (data && totalDuracao > 0) {
-          carregarHorariosDisponiveis(data, totalDuracao);
-        }
-      });
-
-      // salvar agendamento
-      document
-        .getElementById("formAgendamento")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const clienteId = document.getElementById("cliente").value;
-          const servicosSelecionados = Array.from(
-            document.getElementById("servicos").selectedOptions
-          ).map((s) => s.value);
-
-          const data = document.getElementById("data").value;
-          const horario = document.getElementById("horario").value;
-          const realizado = document.getElementById("realizado").value;
-
-          const res = await fetch(apiUrl + "/agendamentos", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              data,
-              horario,
-              clienteId,
-              servicos: servicosSelecionados,
-              realizado,
-            }),
-          });
-
-          const result = await res.json();
-          alert(result.message);
-
-          // fecha o modal
-          bootstrap.Modal.getInstance(
-            document.getElementById("modalAgendamento")
-          ).hide();
-        });
-
-      // carregar dados assim que abrir o modal
-      document
-        .getElementById("modalAgendamento")
-        .addEventListener("show.bs.modal", carregarClientesEServicos);
-    </script>
+    <!-- Seu Script Principal -->
+    <script src="js/agendamento.js"></script>
   </body>
 </html>
