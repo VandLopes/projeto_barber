@@ -135,21 +135,17 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="modalConfirmacaoLabel">
-              Confirmação de Exclusão
+              Confirmação de Desativação
             </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Fechar"
-            ></button>
           </div>
+
           <div class="modal-body">
-            Tem certeza que deseja excluir este serviço? Esta ação não pode ser
-            desfeita.
+            Tem certeza que deseja **desativar** este serviço? Ele não estará
+            mais disponível para novos agendamentos, mas os agendamentos
+            existentes serão mantidos.
           </div>
+
           <div class="modal-footer">
-            <!-- Botão para fechar sem excluir -->
             <button
               type="button"
               class="btn btn-secondary"
@@ -158,13 +154,12 @@
               Cancelar
             </button>
 
-            <!-- Botão de Confirmação (ID crucial para o JS) -->
             <button
               type="button"
               class="btn btn-danger"
               id="btnConfirmarExclusao"
             >
-              Sim, Excluir Serviço
+              Sim, Desativar Serviço
             </button>
           </div>
         </div>

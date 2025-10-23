@@ -181,7 +181,10 @@ async function excluirServico(id) {
   });
 
   const data = await res.json();
-  alert(data.message || "Serviço excluído com sucesso!");
+  alert(
+    data.message ||
+      "Serviço desativado com sucesso! Ele não aparecerá mais na lista."
+  );
   carregarServicos();
 }
 
