@@ -5,7 +5,9 @@ const db = require("../db"); // conexão pool do MySQL
 // Listar clientes
 router.get("/", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM clientes");
+    const [rows] = await db.query(
+      "SELECT id, nome, email, telefone FROM clientes WHERE ativo = TRUE ORDER BY nome"
+    );
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -45,37 +47,22 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const sql = "DELETE FROM clientes WHERE id = ?";
-    await db.query(sql, [id]);
-    res.json({ message: "Cliente excluído com sucesso" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao excluir cliente" });
-  }
-});
+    // MUDANÇA CRUCIAL: Troca de DELETE para UPDATE (Soft Delete)
+    const sql = "UPDATE clientes SET ativo = FALSE WHERE id = ?";
+    const [result] = await db.query(sql, [id]);
 
-// Verificar se cliente possui Agendamento
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Cliente não encontrado." });
+    }
 
-router.get("/:id/has-agendamentos", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // SQL: Conta quantos agendamentos existem para este cliente
-    const [agendamentos] = await db.query(
-      "SELECT COUNT(*) AS total FROM agendamentos WHERE cliente_id = ?",
-      [id]
-    );
-
-    const totalAgendamentos = agendamentos[0].total;
-
-    // Retorna um booleano (true ou false) e o total para o Front-end
+    // Altera a mensagem para refletir a inativação
     res.json({
-      hasAgendamentos: totalAgendamentos > 0,
-      total: totalAgendamentos,
+      message:
+        "Cliente inativado com sucesso. Ele não estará mais ativo para agendamentos.",
     });
   } catch (err) {
-    console.error("Erro ao verificar agendamentos:", err);
-    res.status(500).json({ error: "Erro interno ao verificar agendamentos." });
+    console.error(err);
+    res.status(500).json({ error: "Erro ao inativar cliente" });
   }
 });
 
