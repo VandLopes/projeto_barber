@@ -148,29 +148,6 @@ let modalBody = null;
 let modalInstance = null;
 
 // ===============================
-// FUNÇÃO: Verificar se cliente tem agendamentos
-// ===============================
-async function verificarAgendamentos(id) {
-  const url = `${apiUrl}/clientes/${id}/has-agendamentos`;
-
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) {
-      throw new Error("Falha ao consultar a situação do cliente.");
-    }
-
-    return await res.json();
-  } catch (error) {
-    console.error("Erro na verificação de agendamentos:", error);
-    throw error;
-  }
-}
-
-// ===============================
 // FUNÇÃO: Excluir cliente
 // ===============================
 async function excluirCliente(id) {
@@ -181,51 +158,39 @@ async function excluirCliente(id) {
     });
 
     const data = await res.json();
-    alert(data.message || "Cliente excluído com sucesso!");
+    // Mensagem de alerta ajustada
+    alert(data.message || "Cliente inativado com sucesso!");
     carregarClientes(); // 🔁 Atualiza a lista
   } catch (error) {
-    console.error("Erro ao excluir cliente:", error);
-    alert("Falha ao excluir cliente.");
+    console.error("Erro ao inativar cliente:", error);
+    alert("Falha ao inativar cliente.");
   }
 }
-
 // ===============================
 // FUNÇÃO: Preparar modal de exclusão
 // ===============================
 async function excluirClienteHandler(id) {
+  // Já não é mais 'async'
   idParaExcluir = id;
 
   try {
-    const agendamentos = await verificarAgendamentos(id);
-
     if (!modalInstance) {
       console.error("Erro: instância do modal não inicializada.");
       return;
-    }
+    } // --- Lógica simplificada para Inativação ---
 
-    // --- Lógica de validação ---
-    if (agendamentos?.hasAgendamentos) {
-      // Cliente possui agendamentos → bloqueia exclusão
-      modalBody.innerHTML = `
-        <p><strong>ATENÇÃO!</strong> Este cliente possui <strong>${agendamentos.total}</strong> agendamento(s) ativo(s).</p>
-        <p>A exclusão não é permitida. Remova ou cancele todos os agendamentos antes de prosseguir.</p>
-      `;
-      btnConfirmarExclusao.disabled = true;
-      btnConfirmarExclusao.style.opacity = "0.5";
-    } else {
-      // Cliente sem agendamentos → pode excluir
-      modalBody.innerHTML = `
-        Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-      `;
-      btnConfirmarExclusao.disabled = false;
-      btnConfirmarExclusao.style.opacity = "1";
-    }
-
-    // Exibe o modal
+    // (Apenas configura o modal com a mensagem de inativação e libera o botão)
+    modalBody.innerHTML = `
+        Tem certeza que deseja **inativar** este cliente? Ele não poderá mais agendar
+        serviços, mas seus registros existentes (como agendamentos) serão mantidos.
+    `;
+    btnConfirmarExclusao.disabled = false;
+    btnConfirmarExclusao.style.opacity = "1"; // Exibe o modal
     modalInstance.show();
   } catch (error) {
-    console.error("Erro ao preparar a exclusão:", error);
-    alert(error.message || "Erro ao verificar agendamentos do cliente.");
+    // Este catch agora só pega erros se houver falha na UI, não na validação de agendamentos
+    console.error("Erro ao preparar o modal:", error);
+    alert("Erro interno ao exibir modal de inativação.");
   }
 }
 

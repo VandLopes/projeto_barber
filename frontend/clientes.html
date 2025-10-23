@@ -132,7 +132,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="modalConfirmacaoLabel">
-              Confirmação de Exclusão
+              Confirmação de Inativação
             </h5>
             <button
               type="button"
@@ -141,10 +141,7 @@
               aria-label="Fechar"
             ></button>
           </div>
-          <div class="modal-body" id="modalExclusaoBody">
-            Tem certeza que deseja excluir este cliente? Esta ação não pode ser
-            desfeita.
-          </div>
+          <div class="modal-body" id="modalExclusaoBody"></div>
           <div class="modal-footer">
             <!-- Botão para fechar sem excluir -->
             <button
@@ -154,14 +151,13 @@
             >
               Cancelar
             </button>
-
             <!-- Botão de Confirmação (ID crucial para o JS) -->
             <button
               type="button"
               class="btn btn-danger"
               id="btnConfirmarExclusao"
             >
-              Sim, Excluir Cliente
+              Sim, Inativar Cliente
             </button>
           </div>
         </div>
