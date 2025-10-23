@@ -5,11 +5,14 @@ const db = require("../db"); // conexão pool do MySQL
 // Listar serviços
 router.get("/", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM servicos");
-    res.json(rows);
+    // Adiciona a condição WHERE ativo = TRUE
+    const sql =
+      "SELECT id, nome, preco, duracao FROM servicos WHERE ativo = TRUE ORDER BY nome";
+    const [servicos] = await db.query(sql);
+
+    res.json(servicos);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao buscar serviços" });
+    // ...
   }
 });
 
@@ -59,14 +62,27 @@ router.put("/:id", async (req, res) => {
 
 // Excluir serviço
 router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    const sql = "DELETE FROM servicos WHERE id = ?";
-    await db.query(sql, [id]);
-    res.json({ message: "Serviço excluído com sucesso" });
+    // Soft Delete: Atualiza o campo 'ativo' para FALSE em vez de deletar
+    const [result] = await db.query(
+      "UPDATE servicos SET ativo = FALSE WHERE id = ?",
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Serviço não encontrado." });
+    }
+
+    // Mensagem indicando desativação, não exclusão física
+    res.json({
+      message:
+        "Serviço desativado com sucesso. Ele não estará disponível para novos agendamentos.",
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao excluir serviço" });
+    console.error("Erro ao desativar serviço:", err);
+    res.status(500).json({ error: "Erro interno do servidor." });
   }
 });
 
