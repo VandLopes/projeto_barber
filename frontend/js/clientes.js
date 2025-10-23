@@ -138,47 +138,130 @@ function editarCliente(id) {
       modal.show();
     });
 }
+// ===============================
+// VARIÁVEIS GLOBAIS
+// ===============================
+let idParaExcluir = null;
+let modalElement = null;
+let btnConfirmarExclusao = null;
+let modalBody = null;
+let modalInstance = null;
 
-// Excluir cliente
-async function excluirCliente(id) {
-  // 1. Faz a requisição DELETE
-  const res = await fetch(`${apiUrl}/clientes/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` }, // 🔑 JWT
-  });
+// ===============================
+// FUNÇÃO: Verificar se cliente tem agendamentos
+// ===============================
+async function verificarAgendamentos(id) {
+  const url = `${apiUrl}/clientes/${id}/has-agendamentos`;
 
-  const data = await res.json();
-  alert(data.message);
-  carregarClientes();
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      throw new Error("Falha ao consultar a situação do cliente.");
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("Erro na verificação de agendamentos:", error);
+    throw error;
+  }
 }
 
-let idParaExcluir = null;
+// ===============================
+// FUNÇÃO: Excluir cliente
+// ===============================
+async function excluirCliente(id) {
+  try {
+    const res = await fetch(`${apiUrl}/clientes/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-function excluirClienteHandler(id) {
+    const data = await res.json();
+    alert(data.message || "Cliente excluído com sucesso!");
+    carregarClientes(); // 🔁 Atualiza a lista
+  } catch (error) {
+    console.error("Erro ao excluir cliente:", error);
+    alert("Falha ao excluir cliente.");
+  }
+}
+
+// ===============================
+// FUNÇÃO: Preparar modal de exclusão
+// ===============================
+async function excluirClienteHandler(id) {
   idParaExcluir = id;
 
-  const modal = new bootstrap.Modal(
-    document.getElementById("modalConfirmacaoExclusao")
-  );
-  modal.show();
+  try {
+    const agendamentos = await verificarAgendamentos(id);
+
+    if (!modalInstance) {
+      console.error("Erro: instância do modal não inicializada.");
+      return;
+    }
+
+    // --- Lógica de validação ---
+    if (agendamentos?.hasAgendamentos) {
+      // Cliente possui agendamentos → bloqueia exclusão
+      modalBody.innerHTML = `
+        <p><strong>ATENÇÃO!</strong> Este cliente possui <strong>${agendamentos.total}</strong> agendamento(s) ativo(s).</p>
+        <p>A exclusão não é permitida. Remova ou cancele todos os agendamentos antes de prosseguir.</p>
+      `;
+      btnConfirmarExclusao.disabled = true;
+      btnConfirmarExclusao.style.opacity = "0.5";
+    } else {
+      // Cliente sem agendamentos → pode excluir
+      modalBody.innerHTML = `
+        Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+      `;
+      btnConfirmarExclusao.disabled = false;
+      btnConfirmarExclusao.style.opacity = "1";
+    }
+
+    // Exibe o modal
+    modalInstance.show();
+  } catch (error) {
+    console.error("Erro ao preparar a exclusão:", error);
+    alert(error.message || "Erro ao verificar agendamentos do cliente.");
+  }
 }
 
+// ===============================
+// INICIALIZAÇÃO (ao carregar a página)
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
-  const btnConfirmar = document.getElementById("btnConfirmarExclusao");
-  if (btnConfirmar) {
-    btnConfirmar.addEventListener("click", async () => {
+  // 1. Elementos do DOM
+  modalElement = document.getElementById("modalConfirmacaoExclusao");
+  btnConfirmarExclusao = document.getElementById("btnConfirmarExclusao");
+  modalBody = document.getElementById("modalExclusaoBody");
+
+  // 2. Cria instância do Bootstrap Modal (uma única vez)
+  if (modalElement) {
+    modalInstance = new bootstrap.Modal(modalElement);
+  } else {
+    console.error("Elemento do modal não encontrado no DOM!");
+  }
+
+  // 3. Configura o botão de confirmação
+  if (btnConfirmarExclusao) {
+    btnConfirmarExclusao.addEventListener("click", async () => {
       if (idParaExcluir !== null) {
         try {
           await excluirCliente(idParaExcluir);
         } catch (error) {
-          console.error("Erro ao confirmar exclusão:", error);
-          alert("Ocorreu um erro na exclusão. Tente novamente.");
+          console.error("Erro ao excluir cliente:", error);
+          alert("Erro ao tentar excluir cliente.");
         } finally {
           idParaExcluir = null;
-          // Esconde o modal após a exclusão (ou falha)
-          bootstrap.Modal.getInstance(
-            document.getElementById("modalConfirmacaoExclusao")
-          ).hide();
+          // Fecha o modal
+          if (modalInstance) {
+            modalInstance.hide();
+          } else {
+            bootstrap.Modal.getInstance(modalElement)?.hide();
+          }
         }
       }
     });

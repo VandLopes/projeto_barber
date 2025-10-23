@@ -54,4 +54,29 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Verificar se cliente possui Agendamento
+
+router.get("/:id/has-agendamentos", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // SQL: Conta quantos agendamentos existem para este cliente
+    const [agendamentos] = await db.query(
+      "SELECT COUNT(*) AS total FROM agendamentos WHERE cliente_id = ?",
+      [id]
+    );
+
+    const totalAgendamentos = agendamentos[0].total;
+
+    // Retorna um booleano (true ou false) e o total para o Front-end
+    res.json({
+      hasAgendamentos: totalAgendamentos > 0,
+      total: totalAgendamentos,
+    });
+  } catch (err) {
+    console.error("Erro ao verificar agendamentos:", err);
+    res.status(500).json({ error: "Erro interno ao verificar agendamentos." });
+  }
+});
+
 module.exports = router;

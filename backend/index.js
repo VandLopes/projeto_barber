@@ -34,20 +34,20 @@ function autenticar(req, res, next) {
   });
 }
 
-// 1️⃣ Aplica rotas de autenticação (públicas)
+// Aplica rotas de autenticação (públicas)
 
 app.use("/auth", authRoutes);
 
-// 2️⃣ Aplica rotas protegidas (exigem token)
+// Aplica rotas protegidas (exigem token)
 
 app.use("/clientes", autenticar, clientesRoutes);
 app.use("/servicos", autenticar, servicosRoutes);
 app.use("/agendamentos", autenticar, agendamentosRoutes);
 
-// 🚀 Servir os arquivos da pasta frontend
+// Servir os arquivos da pasta frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// 🚀 Rota padrão -> abre login.html
+//  Rota padrão -> abre login.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/login.html"));
 });
