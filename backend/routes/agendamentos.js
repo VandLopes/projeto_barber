@@ -24,13 +24,6 @@ async function calcularHorariosLivres(data, duracaoRequerida, res) {
       [data]
     );
 
-    // --- DEBUG ---
-    console.log(
-      `[DEBUG] Agendamentos encontrados para ${data}:`,
-      agendamentosDoDia
-    );
-    // -------------
-
     agendamentosDoDia.forEach((ag) => {
       if (typeof ag.inicio === "string" && ag.inicio.includes(":")) {
         const [horas, minutos] = ag.inicio.split(":").map(Number);
@@ -121,6 +114,119 @@ router.get("/horarios-livres", async (req, res) => {
   } catch (err) {
     console.error("Erro no cálculo de horários livres:", err);
     res.status(500).json({ error: "Erro interno ao buscar horários livres." });
+  }
+});
+
+router.get("/eventos", async (req, res) => {
+  try {
+    // Consulta todos os agendamentos necessários.
+    // O cliente precisa ser ativo para aparecer (melhor prática de Soft Delete).
+    const sql = `
+  SELECT 
+      a.id, 
+      DATE_FORMAT(a.data, '%Y-%m-%d') AS data,
+      DATE_FORMAT(a.horario, '%H:%i:%s') AS horario,
+      c.nome AS cliente_nome,
+      GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos_nomes,
+      SUM(s.duracao) AS duracao_total
+  FROM agendamentos a
+  JOIN clientes c ON a.cliente_id = c.id
+  JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
+  JOIN servicos s ON ac.servico_id = s.id
+  WHERE c.ativo = TRUE 
+  GROUP BY a.id
+`;
+    const [agendamentos] = await db.query(sql);
+
+    // Mapeia os dados do banco para o formato do FullCalendar
+    const eventos = agendamentos.map((agendamento) => {
+      // Combina data (YYYY-MM-DD) e horário (HH:mm:ss) para o formato ISO 8601
+      // Usamos a duração total para calcular o 'end'
+      const inicioISO = `${agendamento.data}T${agendamento.horario}`;
+
+      // Calcula a hora de término
+      const duracaoEmMinutos = Number(agendamento.duracao_total) || 30; // Garante uma duração mínima
+
+      // Cria um objeto Date para calcular o fim (necessário se o MySQL não armazena o fim)
+      // Se a.horario está em HH:mm:ss, e a.data em YYYY-MM-DD
+      const [ano, mes, dia] = agendamento.data.split("-").map(Number);
+      const [horas, minutos, segundos] = agendamento.horario
+        .split(":")
+        .map(Number);
+
+      // Cria o objeto Date (ajuste o fuso horário se necessário, aqui assume o local do servidor)
+      const dataInicio = new Date(ano, mes - 1, dia, horas, minutos, segundos);
+      const dataFim = new Date(dataInicio.getTime() + duracaoEmMinutos * 60000);
+
+      // Formata o fim para ISO string, ou apenas usa o objeto Date se for mais fácil
+      const fimISO = dataFim.toISOString().substring(0, 19); // YYYY-MM-DDT_HH:mm:ss (Formato compatível com FullCalendar)
+
+      return {
+        id: agendamento.id,
+        // Título: Nome do Cliente + (Serviços)
+        title: `${agendamento.cliente_nome} (${agendamento.servicos_nomes})`,
+        start: inicioISO,
+        end: fimISO,
+        allDay: false,
+        // Você pode adicionar mais dados aqui para ser usado ao clicar no evento (extendedProps)
+        extendedProps: {
+          servicos: agendamento.servicos_nomes,
+          duracao: duracaoEmMinutos,
+        },
+      };
+    });
+
+    res.json(eventos);
+  } catch (err) {
+    console.error(
+      "Erro ao buscar eventos para o calendário (GET /eventos):",
+      err
+    );
+    res
+      .status(500)
+      .json({ error: "Erro ao buscar agendamentos para o calendário." });
+  }
+});
+
+// ==================== RELATÓRIO DE AGENDAMENTOS ====================
+router.get("/relatorio", async (req, res) => {
+  try {
+    const sql = `
+      SELECT 
+        a.id AS numero,
+        DATE_FORMAT(a.data, '%Y-%m-%d') AS data,
+        SUM(s.preco) AS valor,
+        GROUP_CONCAT(s.nome SEPARATOR ', ') AS servico,
+        SUM(s.duracao) AS duracao,
+        c.nome AS cliente,
+        a.realizado
+      FROM agendamentos a
+      JOIN clientes c ON a.cliente_id = c.id
+      JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
+      JOIN servicos s ON ac.servico_id = s.id
+      GROUP BY a.id
+      ORDER BY a.data DESC, a.horario DESC
+    `;
+
+    const [rows] = await db.query(sql);
+
+    // Padroniza o formato antes de enviar
+    const relatorio = rows.map((ag) => ({
+      numero: ag.numero,
+      data: ag.data,
+      valor: parseFloat(ag.valor).toFixed(2),
+      servico: ag.servico,
+      duracao: `${ag.duracao} min`,
+      cliente: ag.cliente,
+      realizado: ag.realizado ? "Sim" : "Não",
+    }));
+
+    res.json(relatorio);
+  } catch (err) {
+    console.error("Erro ao buscar relatório de agendamentos:", err);
+    res
+      .status(500)
+      .json({ error: "Erro ao buscar relatório de agendamentos." });
   }
 });
 

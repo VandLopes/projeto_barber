@@ -163,6 +163,10 @@ document
         alert(result.message || "Agendamento salvo com sucesso.");
         agendamentoEmEdicao = null;
         carregarAgendamentos(); // Recarrega a lista
+        // 💡 NOVA LÓGICA: ATUALIZAÇÃO DO FULLCALENDAR
+        if (window.fullCalendarInstance) {
+          window.fullCalendarInstance.refetchEvents(); // <-- CHAMA A ATUALIZAÇÃO DA HOME
+        }
       } else {
         alert(result.error || "Erro ao salvar agendamento.");
       }

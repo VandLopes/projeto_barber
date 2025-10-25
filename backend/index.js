@@ -22,6 +22,7 @@ const agendamentosRoutes = require("./routes/agendamentos");
 
 // middleware de autenticação
 function autenticar(req, res, next) {
+  // 1. DECLARAÇÃO E INICIALIZAÇÃO NO TOPO
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
