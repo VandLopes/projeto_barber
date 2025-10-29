@@ -46,8 +46,8 @@ async function carregarClientesEServicos() {
         )}" data-duracao="${
           s.duracao // Usa a coluna correta 'duracao'
         }">
-            ${s.nome} - R$ ${parseFloat(s.preco).toFixed(2)} (${s.duracao} min)
-          </option>`
+        ${s.nome} - R$ ${parseFloat(s.preco).toFixed(2)} (${s.duracao} min)
+        </option>`
       )
       .join(""); // Dispara o cálculo inicial
 
@@ -95,8 +95,23 @@ document.getElementById("data").addEventListener("change", calcularTotais);
 // === Carregar Horários Livres (Chama a Rota do Backend) ===
 async function carregarHorariosDisponiveis(data, duracao) {
   try {
+    // --- INÍCIO DA MUDANÇA ---
+
+    // 1. Monta a URL base
+    let url = `${apiUrl}/agendamentos/horarios-livres?data=${data}&duracao=${duracao}`;
+
+    // 2. Se estivermos editando (variável global), anexa o ID
+    if (agendamentoEmEdicao) {
+      url += `&editandoId=${agendamentoEmEdicao}`;
+      console.log(
+        "Buscando horários em MODO DE EDIÇÃO, ignorando ID:",
+        agendamentoEmEdicao
+      );
+    }
+    // --- FIM DA MUDANÇA ---
+
     const res = await fetch(
-      `${apiUrl}/agendamentos/horarios-livres?data=${data}&duracao=${duracao}`,
+      url, // Usa a URL dinâmica
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -119,6 +134,77 @@ async function carregarHorariosDisponiveis(data, duracao) {
     console.error("Erro ao carregar horários:", error);
     document.getElementById("horario").innerHTML =
       '<option value="" disabled selected>Erro ao carregar</option>';
+  }
+}
+
+// BUSCA UM AGENDAMENTO E ABRE O MODAL
+async function editarAgendamento(id) {
+  try {
+    const res = await fetch(`${apiUrl}/agendamentos`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const agendamentos = await res.json();
+    const ag = agendamentos.find((a) => a.id === id);
+
+    if (!ag) return alert("Agendamento não encontrado.");
+
+    await carregarClientesEServicos();
+    console.log("'carregarClientesEServicos' CONCLUÍDO.");
+
+    agendamentoEmEdicao = ag.id; // IMPORTANTE: Defina o ID de edição AQUI
+
+    const modalElement = document.getElementById("modalAgendamento");
+    const modal = new bootstrap.Modal(modalElement);
+
+    modalElement.addEventListener(
+      "shown.bs.modal",
+      async () => {
+        console.log("Modal 100% visível. Preenchendo campos...");
+
+        // --- 1. Preenche os valores base ---
+        document.getElementById("data").value = ag.data.substring(0, 10);
+        document.getElementById("cliente").value = ag.cliente_id;
+        document.getElementById("realizado").value = ag.realizado;
+
+        // --- 2. Preenche os Serviços (Múltiplo) ---
+        const idsServicosSelecionados = ag.servicos_ids || [];
+        const selectServicos = document.getElementById("servicos");
+        for (const option of selectServicos.options) {
+          const idOpcao = parseInt(option.value);
+          option.selected = idsServicosSelecionados.includes(idOpcao);
+        }
+
+        // --- 3. DISPARA OS EVENTOS para carregar totais E HORÁRIOS ---
+        selectServicos.dispatchEvent(new Event("change"));
+        console.log("Disparando evento 'change' na DATA.");
+        document.getElementById("data").dispatchEvent(new Event("change"));
+
+        // --- 4. O Pulo do Gato (Esperar o 'fetch' dos horários) ---
+
+        // <<< MUDANÇA AQUI: Aumentamos o tempo para 300ms >>>
+        console.log("Aguardando 300ms para a lista de horários carregar...");
+        await new Promise((resolve) => setTimeout(resolve, 300)); // 300ms de espera
+
+        // --- 5. AGORA, com os horários já carregados, setamos o valor ---
+        try {
+          const horaAgendamento = ag.horario.substring(0, 5); // Pega "13:00"
+          console.log("Tentando setar horário para:", horaAgendamento);
+          document.getElementById("horario").value = horaAgendamento;
+        } catch (e) {
+          console.error(
+            "Não foi possível setar o horário. Verifique o ID 'horario'",
+            e
+          );
+        }
+      },
+      { once: true }
+    );
+
+    // 6. Finalmente, mostramos o modal.
+    modal.show();
+  } catch (error) {
+    console.error("Erro ao editar agendamento:", error);
+    alert("Erro ao carregar dados para edição.");
   }
 }
 
@@ -291,24 +377,72 @@ async function editarAgendamento(id) {
       headers: { Authorization: `Bearer ${token}` },
     });
     const agendamentos = await res.json();
-
     const ag = agendamentos.find((a) => a.id === id);
-    if (!ag) return alert("Agendamento não encontrado."); // Chama a função para garantir que os dropdowns estejam populados
 
-    await carregarClientesEServicos(); // Preenche os campos
+    if (!ag) return alert("Agendamento não encontrado.");
 
-    document.getElementById("data").value = ag.data.substring(0, 10);
-    document.getElementById("cliente").value = ag.cliente_id;
-    document.getElementById("realizado").value = ag.realizado; // Marca o ID para edição
+    await carregarClientesEServicos();
+    console.log("'carregarClientesEServicos' CONCLUÍDO.");
 
-    agendamentoEmEdicao = ag.id; // **NOTA:** Preencher a seleção múltipla de serviços é complexo // e depende de saber todos os IDs de serviço agendados. // Assumindo que 'ag.servicos_ids' é retornado pelo backend (se necessário) // Abre o modal
+    agendamentoEmEdicao = ag.id; // IMPORTANTE: Defina o ID de edição AQUI
 
-    const modal = new bootstrap.Modal(
-      document.getElementById("modalAgendamento")
-    );
-    modal.show(); // NOTA: Para preencher os horários corretamente no modo edição, // você precisaria disparar o cálculo de totais após setar os serviços.
+    const modalElement = document.getElementById("modalAgendamento");
+    const modal = new bootstrap.Modal(modalElement);
 
-    document.getElementById("servicos").dispatchEvent(new Event("change"));
+    // O "ouvinte" agora é 'async' para podermos usar 'await'
+    modalElement.addEventListener(
+      "shown.bs.modal",
+      async () => {
+        console.log("Modal 100% visível. Preenchendo campos...");
+
+        // --- 1. Preenche os valores base ---
+        document.getElementById("data").value = ag.data.substring(0, 10);
+        document.getElementById("cliente").value = ag.cliente_id;
+        document.getElementById("realizado").value = ag.realizado;
+
+        // --- 2. Preenche os Serviços (Múltiplo) ---
+        const idsServicosSelecionados = ag.servicos_ids || [];
+        const selectServicos = document.getElementById("servicos");
+        for (const option of selectServicos.options) {
+          const idOpcao = parseInt(option.value);
+          option.selected = idsServicosSelecionados.includes(idOpcao);
+        }
+
+        // --- 3. DISPARA OS EVENTOS para carregar totais E HORÁRIOS ---
+        // Dispara o 'change' nos serviços (para calcular totais)
+        selectServicos.dispatchEvent(new Event("change"));
+
+        // DISPARA O 'CHANGE' NA DATA (PARA BUSCAR OS HORÁRIOS)
+        console.log("Disparando evento 'change' na DATA.");
+        document.getElementById("data").dispatchEvent(new Event("change"));
+
+        // --- 4. O Pulo do Gato (Esperar o 'fetch' dos horários) ---
+        // A sua função que busca horários (disparada pelo evento acima)
+        // é ASSÍNCRONA (faz um fetch). O Javascript não espera ela terminar.
+        // Vamos adicionar uma pequena pausa para dar tempo da lista de horários ser populada.
+        console.log("Aguardando 150ms para a lista de horários carregar...");
+        await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms de espera
+
+        // --- 5. AGORA, com os horários já carregados, setamos o valor ---
+        try {
+          const horaAgendamento = ag.horario.substring(0, 5); // Pega "13:00"
+          console.log("Tentando setar horário para:", horaAgendamento);
+          document.getElementById("horario").value = horaAgendamento;
+
+          // Se ainda assim não funcionar, descomente o log abaixo:
+          // console.log("HTML do Select de Horário:", document.getElementById("horario").innerHTML);
+        } catch (e) {
+          console.error(
+            "Não foi possível setar o horário. Verifique o ID 'horario'",
+            e
+          );
+        }
+      },
+      { once: true }
+    ); // { once: true } é crucial
+
+    // 6. Finalmente, mostramos o modal.
+    modal.show();
   } catch (error) {
     console.error("Erro ao editar agendamento:", error);
     alert("Erro ao carregar dados para edição.");

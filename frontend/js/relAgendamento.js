@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const dataInicio = document.getElementById("dataInicio").value;
     const dataFim = document.getElementById("dataFim").value;
+    const status = document.getElementById("filtroStatus").value;
 
     try {
       const res = await fetch(`${apiUrl}/agendamentos/relatorio`, {
@@ -29,9 +30,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const todosAgendamentos = await res.json();
 
       // Filtra entre as datas escolhidas
-      dadosFiltrados = todosAgendamentos.filter(
-        (ag) => ag.data >= dataInicio && ag.data <= dataFim
-      );
+      dadosFiltrados = todosAgendamentos.filter((ag) => {
+        const dentroDoPeriodo = ag.data >= dataInicio && ag.data <= dataFim;
+
+        if (!status) {
+          // status vazio = todos os status
+          return dentroDoPeriodo;
+        } else {
+          return dentroDoPeriodo && ag.realizado === status;
+        }
+      });
 
       if (dadosFiltrados.length > 0) {
         paginaAtual = 1;

@@ -32,17 +32,25 @@
 
       <div class="card card-body mb-4">
         <form id="formRelatorio" class="row g-3 align-items-end">
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label for="dataInicio" class="form-label">Data Início</label>
             <input type="date" class="form-control" id="dataInicio" required />
           </div>
-          <div class="col-md-5">
+          <div class="col-md-4">
             <label for="dataFim" class="form-label">Data Fim</label>
             <input type="date" class="form-control" id="dataFim" required />
           </div>
-          <div class="col-md-2">
+          <div class="col-md-3">
+            <label for="filtroStatus" class="form-label">Status</label>
+            <select class="form-select" id="filtroStatus">
+              <option value="">Todos os Status</option>
+              <option value="Sim">Realizado</option>
+              <option value="Não">Não Realizado</option>
+            </select>
+          </div>
+          <div class="col-md-1">
             <button type="submit" class="btn btn-primary w-100">
-              <i class="bi bi-search"></i> Gerar
+              <i class="bi bi-search"></i>
             </button>
           </div>
         </form>

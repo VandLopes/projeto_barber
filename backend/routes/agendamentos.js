@@ -3,39 +3,53 @@ const router = express.Router();
 const db = require("../db"); // Pool do MySQL
 
 // === FUNÇÃO DE CÁLCULO DE HORÁRIOS LIVRES ===
-async function calcularHorariosLivres(data, duracaoRequerida, res) {
-  const HORA_INICIO = 8; // Barbeiro começa às 8:00
-  const HORA_FIM = 18; // Barbeiro termina às 18:00
-  const INTERVALO_BASE = 30; // Intervalo de slots base em minutos
+async function calcularHorariosLivres(data, duracaoRequerida, editandoId) {
+  // <<< MUDANÇA AQUI: Recebe editandoId
+  const HORA_INICIO = 8;
+  const HORA_FIM = 18;
+  const INTERVALO_BASE = 30;
 
   const horariosOcupados = [];
 
-  // 1. Busca agendamentos existentes no dia, SOMANDO a duração de todos os serviços
+  // 1. Busca agendamentos existentes no dia
   try {
-    const [agendamentosDoDia] = await db.query(
-      `SELECT 
-                TIME_FORMAT(a.horario, '%H:%i') as inicio, 
-                SUM(s.duracao) as duracao_total 
-             FROM agendamentos a
-             JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
-             JOIN servicos s ON ac.servico_id = s.id
-             WHERE a.data = ?
-             GROUP BY a.id`,
-      [data]
-    );
+    // --- INÍCIO DA MUDANÇA ---
+
+    // 1. Monta a query base
+    let sql = `
+      SELECT 
+        a.id, -- Adicionado para depuração e para a cláusula !=
+        TIME_FORMAT(a.horario, '%H:%i') as inicio, 
+        SUM(s.duracao) as duracao_total 
+      FROM agendamentos a
+      JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
+      JOIN servicos s ON ac.servico_id = s.id
+      WHERE a.data = ?
+    `;
+
+    const params = [data];
+
+    // 2. Se estiver editando, EXCLUI o próprio ID da verificação
+    if (editandoId) {
+      sql += ` AND a.id != ?`;
+      params.push(editandoId);
+    }
+
+    // 3. Completa a query
+    sql += ` GROUP BY a.id`;
+
+    // 4. Executa a query dinâmica
+    const [agendamentosDoDia] = await db.query(sql, params);
+
+    // --- FIM DA MUDANÇA ---
 
     agendamentosDoDia.forEach((ag) => {
       if (typeof ag.inicio === "string" && ag.inicio.includes(":")) {
         const [horas, minutos] = ag.inicio.split(":").map(Number);
-
-        // Inicializa a data no fuso horário local
         const [ano, mes, dia] = data.split("-").map(Number);
         const inicio = new Date(ano, mes - 1, dia, horas, minutos, 0, 0);
-
-        // Soma a duração total em minutos
         const duracaoEmMinutos = Number(ag.duracao_total) || 30;
         const fim = new Date(inicio.getTime() + duracaoEmMinutos * 60000);
-
         horariosOcupados.push({ inicio, fim });
       }
     });
@@ -44,18 +58,14 @@ async function calcularHorariosLivres(data, duracaoRequerida, res) {
       "Erro fatal ao buscar agendamentos ocupados do BD (N:N):",
       error
     );
-    return []; // Retorna vazio se a consulta falhar
+    return [];
   }
 
   const slotsLivres = [];
-
-  // Configura os limites de horário com base na data correta
   const [ano, mes, dia] = data.split("-").map(Number);
   let horaAtual = new Date(ano, mes - 1, dia, HORA_INICIO, 0, 0, 0);
-
   const horaLimite = new Date(ano, mes - 1, dia, HORA_FIM, 0, 0, 0);
 
-  // Itera por todos os slots possíveis
   while (horaAtual.getTime() < horaLimite.getTime()) {
     const slotFim = new Date(horaAtual.getTime() + duracaoRequerida * 60000);
 
@@ -64,8 +74,6 @@ async function calcularHorariosLivres(data, duracaoRequerida, res) {
     }
 
     let isLivre = true;
-
-    // Verifica se o novo slot se sobrepõe
     for (const agendamento of horariosOcupados) {
       if (
         horaAtual.getTime() < agendamento.fim.getTime() &&
@@ -83,8 +91,6 @@ async function calcularHorariosLivres(data, duracaoRequerida, res) {
         ).padStart(2, "0")}`
       );
     }
-
-    // Avança para o próximo slot
     horaAtual.setTime(horaAtual.getTime() + INTERVALO_BASE * 60000);
   }
 
@@ -96,7 +102,8 @@ async function calcularHorariosLivres(data, duracaoRequerida, res) {
 // Rota 1: GET /agendamentos/horarios-livres (Cálculo de Horários)
 router.get("/horarios-livres", async (req, res) => {
   try {
-    const { data, duracao } = req.query;
+    // <<< MUDANÇA AQUI: Pega o editandoId da query >>>
+    const { data, duracao, editandoId } = req.query;
 
     if (!data || !duracao) {
       return res
@@ -109,7 +116,12 @@ router.get("/horarios-livres", async (req, res) => {
       return res.status(400).json({ error: "Duração inválida." });
     }
 
-    const horarios = await calcularHorariosLivres(data, duracaoMinutos, res);
+    // <<< MUDANÇA AQUI: Passa o editandoId para a função >>>
+    const horarios = await calcularHorariosLivres(
+      data,
+      duracaoMinutos,
+      editandoId
+    );
     res.json(horarios);
   } catch (err) {
     console.error("Erro no cálculo de horários livres:", err);
@@ -218,7 +230,7 @@ router.get("/relatorio", async (req, res) => {
       servico: ag.servico,
       duracao: `${ag.duracao} min`,
       cliente: ag.cliente,
-      realizado: ag.realizado ? "Sim" : "Não",
+      realizado: ag.realizado === "Sim" ? "Sim" : "Não",
     }));
 
     res.json(relatorio);
@@ -241,28 +253,39 @@ router.get("/", async (req, res) => {
           DATE_FORMAT(a.horario, '%H:%i:%s') AS horario, 
           a.realizado, 
           c.nome AS cliente_nome,
+          a.cliente_id,                     -- <<< 1. ADICIONADO AQUI
           GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos_nomes,
+          GROUP_CONCAT(s.id SEPARATOR ',') AS servicos_ids, -- <<< 2. ADICIONADO AQUI
           SUM(s.duracao) AS duracao_total,
           SUM(s.preco) AS valor_total
         FROM agendamentos a
         JOIN clientes c ON a.cliente_id = c.id
         JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
         JOIN servicos s ON ac.servico_id = s.id
-        GROUP BY a.id
+        GROUP BY a.id, a.data, a.horario, a.realizado, c.nome, a.cliente_id -- <<< 3. ATUALIZADO AQUI
         ORDER BY a.data DESC, a.horario DESC`
     );
 
     // Normaliza e garante que os tipos estejam corretos
-    const agendamentosFormatados = rows.map((ag) => ({
-      id: ag.id,
-      data: ag.data, // já vem em YYYY-MM-DD (ok p/ frontend)
-      horario: ag.horario, // já vem em HH:mm:ss (ok p/ frontend)
-      cliente_nome: ag.cliente_nome,
-      servicos_nomes: ag.servicos_nomes,
-      duracao: Number(ag.duracao_total) || 0,
-      valor: parseFloat(ag.valor_total) || 0,
-      realizado: ag.realizado === 1 || ag.realizado === "Sim" ? "Sim" : "Não",
-    }));
+    const agendamentosFormatados = rows.map((ag) => {
+      // 4. Processa a string de IDs (ex: "1,3") para um array de números [1, 3]
+      const servicosIdsArray = ag.servicos_ids
+        ? ag.servicos_ids.split(",").map(Number)
+        : [];
+
+      return {
+        id: ag.id,
+        data: ag.data,
+        horario: ag.horario,
+        cliente_nome: ag.cliente_nome,
+        cliente_id: ag.cliente_id, // <<< 5. ADICIONADO AQUI
+        servicos_nomes: ag.servicos_nomes,
+        servicos_ids: servicosIdsArray, // <<< 6. ADICIONADO AQUI
+        duracao: Number(ag.duracao_total) || 0,
+        valor: parseFloat(ag.valor_total) || 0,
+        realizado: ag.realizado === 1 || ag.realizado === "Sim" ? "Sim" : "Não",
+      };
+    });
 
     res.json(agendamentosFormatados);
   } catch (err) {
