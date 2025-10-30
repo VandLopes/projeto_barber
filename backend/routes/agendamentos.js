@@ -310,6 +310,17 @@ router.post("/", async (req, res) => {
         .status(400)
         .json({ error: "Pelo menos um serviço deve ser selecionado." });
     }
+    const dataInformada = new Date(data);
+    const hoje = new Date();
+
+    hoje.setHours(0, 0, 0, 0);
+    dataInformada.setHours(0, 0, 0, 0);
+
+    if (dataInformada < hoje) {
+      return res.status(400).json({
+        error: "Não é permitido criar agendamentos em datas passadas.",
+      });
+    }
 
     // 1. Insere o Agendamento principal
     const sqlAgendamento = `
