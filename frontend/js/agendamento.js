@@ -267,8 +267,6 @@ document
     }
   });
 
-// === Funções de CRUD (Listar/Editar/Excluir) ===
-
 // RENDERIZA A TABELA PRINCIPAL
 
 async function carregarAgendamentos() {
@@ -416,21 +414,16 @@ async function editarAgendamento(id) {
         console.log("Disparando evento 'change' na DATA.");
         document.getElementById("data").dispatchEvent(new Event("change"));
 
-        // --- 4. O Pulo do Gato (Esperar o 'fetch' dos horários) ---
-        // A sua função que busca horários (disparada pelo evento acima)
+        // função que busca horários (disparada pelo evento acima)
         // é ASSÍNCRONA (faz um fetch). O Javascript não espera ela terminar.
-        // Vamos adicionar uma pequena pausa para dar tempo da lista de horários ser populada.
+
         console.log("Aguardando 150ms para a lista de horários carregar...");
         await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms de espera
 
-        // --- 5. AGORA, com os horários já carregados, setamos o valor ---
         try {
           const horaAgendamento = ag.horario.substring(0, 5); // Pega "13:00"
           console.log("Tentando setar horário para:", horaAgendamento);
           document.getElementById("horario").value = horaAgendamento;
-
-          // Se ainda assim não funcionar, descomente o log abaixo:
-          // console.log("HTML do Select de Horário:", document.getElementById("horario").innerHTML);
         } catch (e) {
           console.error(
             "Não foi possível setar o horário. Verifique o ID 'horario'",
@@ -439,9 +432,8 @@ async function editarAgendamento(id) {
         }
       },
       { once: true }
-    ); // { once: true } é crucial
+    );
 
-    // 6. Finalmente, mostramos o modal.
     modal.show();
   } catch (error) {
     console.error("Erro ao editar agendamento:", error);
