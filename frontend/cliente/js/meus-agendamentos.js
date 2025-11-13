@@ -24,14 +24,32 @@ async function carregarAgendamentos() {
       return;
     }
 
+    // --- AGORA SIM: formatação dentro do loop ---
     agendamentos.forEach((ag) => {
+      // Tratamento data/hora
+      let dataFormatada = "Data Inválida";
+      let horarioFormatado = "Horário Inválido";
+
+      if (ag.data && ag.horario) {
+        const dataHoraString = `${ag.data}T${ag.horario}`;
+        const dataHora = new Date(dataHoraString);
+
+        if (!isNaN(dataHora.getTime())) {
+          dataFormatada = dataHora.toLocaleDateString("pt-BR");
+          horarioFormatado = dataHora.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+      }
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
-          <td>${new Date(ag.data).toLocaleDateString("pt-BR")}</td>
-          <td>${ag.horario}</td>
+          <td>${dataFormatada}</td>
+          <td>${horarioFormatado}</td>
           <td>${ag.servicos}</td>
           <td>R$ ${(parseFloat(ag.valor_total) || 0).toFixed(2)}</td>
-          <td>${ag.realizado ? "Sim" : "Não"}</td>
+          <td>${ag.realizado}</td>
         `;
       lista.appendChild(tr);
     });
