@@ -19,6 +19,8 @@ const authRoutes = require("./routes/authRoutes");
 const clientesRoutes = require("./routes/clientes");
 const servicosRoutes = require("./routes/servicos");
 const agendamentosRoutes = require("./routes/agendamentos");
+const clientePublicoRoutes = require("./routes/clientePublico");
+const clienteAgendamentoRoutes = require("./routes/clienteAgendamento");
 
 // middleware de autenticação
 function autenticar(req, res, next) {
@@ -42,8 +44,12 @@ app.use("/auth", authRoutes);
 // Aplica rotas protegidas (exigem token)
 
 app.use("/clientes", autenticar, clientesRoutes);
-app.use("/servicos", autenticar, servicosRoutes);
+app.use("/servicos", servicosRoutes);
 app.use("/agendamentos", autenticar, agendamentosRoutes);
+
+// Login do cliente
+app.use("/cliente", clientePublicoRoutes);
+app.use("/cliente/agendamento", clienteAgendamentoRoutes);
 
 // Servir os arquivos da pasta frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
@@ -51,6 +57,10 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 //  Rota padrão -> abre login.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/login.html"));
+});
+
+app.get("/cliente", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/cliente/index.html"));
 });
 
 app.listen(port, () => {

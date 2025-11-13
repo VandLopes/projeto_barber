@@ -2,6 +2,19 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db"); // conexão pool do MySQL
 
+// rota pública para clientes verem os serviços
+router.get("/publico", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT id, nome, preco, duracao FROM servicos WHERE ativo = TRUE"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Erro ao buscar serviços públicos:", err);
+    res.status(500).json({ error: "Erro ao buscar serviços." });
+  }
+});
+
 // Listar serviços
 router.get("/", async (req, res) => {
   try {
