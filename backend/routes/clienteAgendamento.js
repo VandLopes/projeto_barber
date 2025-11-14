@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); // conexão com o banco
-const { calcularHorariosLivres } = require("./agendamentos"); // importa a função do módulo de agendamentos
+const db = require("../db");
+const enviarEmail = require("../utils/email");
 
-// --- ROTA PÚBLICA: consulta de horários livres ---
+// Importa só a função que você exportou no módulo de agendamentos
+const { calcularHorariosLivres } = require("./agendamentos");
+
+// -------------------- ROTA: HORÁRIOS LIVRES --------------------
 router.get("/horarios-livres", async (req, res) => {
   try {
     const { data, duracao } = req.query;
@@ -27,9 +30,10 @@ router.get("/horarios-livres", async (req, res) => {
   }
 });
 
+// -------------------- ROTA: CRIAR AGENDAMENTO DO CLIENTE --------------------
 router.post("/", async (req, res) => {
   try {
-    const { clienteId, data, horario, servicos, valor, duracao } = req.body;
+    const { clienteId, data, horario, servicos } = req.body;
 
     if (!clienteId || !data || !horario || !servicos || servicos.length === 0) {
       return res
@@ -37,7 +41,7 @@ router.post("/", async (req, res) => {
         .json({ error: "Dados incompletos para agendamento." });
     }
 
-    // 1. Cria o agendamento principal
+    // 1. Criar o agendamento
     const sqlAgendamento = `
       INSERT INTO agendamentos (data, horario, cliente_id, realizado)
       VALUES (?, ?, ?, ?)
@@ -51,13 +55,46 @@ router.post("/", async (req, res) => {
 
     const agendamentoId = result.insertId;
 
-    // 2. Relaciona os serviços
+    // 2. Relacionar serviços
     const sqlServicos = `
       INSERT INTO agendamentos_servicos (agendamento_id, servico_id)
       VALUES ?
     `;
     const valores = servicos.map((id) => [agendamentoId, id]);
     await db.query(sqlServicos, [valores]);
+
+    // 3. Buscar dados do cliente
+    const [clienteData] = await db.query(
+      "SELECT nome, email FROM clientes WHERE id = ?",
+      [clienteId]
+    );
+    const cliente = clienteData[0];
+
+    // 4. Buscar nomes dos serviços
+    const [servicosInfo] = await db.query(
+      `SELECT nome FROM servicos WHERE id IN (?)`,
+      [servicos]
+    );
+    const servicosNomes = servicosInfo.map((s) => s.nome).join(", ");
+
+    // 5. Modelo de e-mail
+    const htmlEmail = `
+      <h2>Agendamento Confirmado! 💈</h2>
+      <p>Olá <strong>${cliente.nome}</strong>, seu agendamento foi confirmado.</p>
+
+      <h3>📅 Detalhes do agendamento:</h3>
+      <ul>
+        <li><strong>Data:</strong> ${data}</li>
+        <li><strong>Horário:</strong> ${horario}</li>
+        <li><strong>Serviços:</strong> ${servicosNomes}</li>
+      </ul>
+
+      <p>Agradecemos sua preferência!</p>
+      <p><strong>Barbearia</strong></p>
+    `;
+
+    // 6. Enviar e-mail
+    await enviarEmail(cliente.email, "💈 Agendamento Confirmado", htmlEmail);
 
     res.status(201).json({ message: "Agendamento criado com sucesso!" });
   } catch (error) {
@@ -66,7 +103,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// === ROTA PARA LISTAR AGENDAMENTOS DO CLIENTE ===
+// -------------------- ROTA: AGENDAMENTOS DO CLIENTE --------------------
 router.get("/:clienteId", async (req, res) => {
   try {
     const { clienteId } = req.params;
@@ -89,6 +126,7 @@ router.get("/:clienteId", async (req, res) => {
       `,
       [clienteId]
     );
+
     res.json(rows);
   } catch (error) {
     console.error("Erro ao buscar agendamentos do cliente:", error);
