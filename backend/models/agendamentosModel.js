@@ -1,6 +1,28 @@
 const db = require("../db");
 
 module.exports = {
+  listarAgendamentosPorCliente: async (clienteId) => {
+    const [rows] = await db.query(
+      `
+      SELECT 
+        a.id,
+        DATE_FORMAT(a.data, '%Y-%m-%d') AS data,
+        TIME_FORMAT(a.horario, '%H:%i') AS horario,
+        GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos,
+        SUM(s.preco) AS valor_total,
+        a.realizado
+      FROM agendamentos a
+      JOIN agendamentos_servicos ac ON a.id = ac.agendamento_id
+      JOIN servicos s ON ac.servico_id = s.id
+      WHERE a.cliente_id = ?
+      GROUP BY a.id
+      ORDER BY a.data DESC, a.horario DESC
+      `,
+      [clienteId]
+    );
+
+    return rows;
+  },
   async listarTodos() {
     const [rows] = await db.query(`
       SELECT 
