@@ -2,38 +2,69 @@ const db = require("../db");
 const calcularHorariosLivres = require("../utils/calcularHorariosLivres");
 
 module.exports = {
-  // Buscar agendamentos do cliente
   async buscarPorCliente(clienteId) {
     const [rows] = await db.query(
-      `SELECT 
-        a.id, 
-        a.data, 
+      `
+      SELECT 
+        a.id,
+        DATE_FORMAT(a.data, '%Y-%m-%d') AS data,
         TIME_FORMAT(a.horario, '%H:%i') AS horario,
-        s.nome AS servico
+        GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos
       FROM agendamentos a
-      JOIN servicos s ON s.id = a.servico_id
+      JOIN agendamentos_servicos ac ON ac.agendamento_id = a.id
+      JOIN servicos s ON s.id = ac.servico_id
       WHERE a.cliente_id = ?
-      ORDER BY a.data ASC, a.horario ASC`,
+      GROUP BY a.id
+      ORDER BY a.data DESC, a.horario DESC
+      `,
       [clienteId]
     );
+
     return rows;
   },
 
-  // Criar novo agendamento
-  async criar({ cliente_id, servico_id, data, horario }) {
-    const [result] = await db.query(
-      `INSERT INTO agendamentos (cliente_id, servico_id, data, horario)
-       VALUES (?, ?, ?, ?)`,
-      [cliente_id, servico_id, data, horario]
-    );
+  // Criar agendamento completo
+  async criar({ clienteId, data, horario, servicos }) {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    return { id: result.insertId, cliente_id, servico_id, data, horario };
+      // 1 — cria agendamento
+      const [result] = await conn.query(
+        `
+        INSERT INTO agendamentos (cliente_id, data, horario, realizado)
+        VALUES (?, ?, ?, 'Não')
+        `,
+        [clienteId, data, horario]
+      );
+
+      const agendamentoId = result.insertId;
+
+      // 2 — vincula os serviços
+      for (const servicoId of servicos) {
+        await conn.query(
+          `
+          INSERT INTO agendamentos_servicos (agendamento_id, servico_id)
+          VALUES (?, ?)
+          `,
+          [agendamentoId, servicoId]
+        );
+      }
+
+      await conn.commit();
+      return agendamentoId;
+    } catch (error) {
+      await conn.rollback();
+      console.error("Erro model criar agendamento:", error);
+      throw error;
+    } finally {
+      conn.release();
+    }
   },
 
-  // Horários livres
-  async horariosLivres(data, duracao) {
+  async horariosLivres(data) {
     try {
-      const horarios = await calcularHorariosLivres(data, duracao, null);
+      const horarios = await calcularHorariosLivres(data);
       return horarios;
     } catch (error) {
       console.error("Erro no model horariosLivres:", error);
@@ -41,7 +72,6 @@ module.exports = {
     }
   },
 
-  // Cancelar
   async cancelar(id) {
     await db.query(`DELETE FROM agendamentos WHERE id = ?`, [id]);
     return true;
