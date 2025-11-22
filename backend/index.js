@@ -13,13 +13,14 @@ const SECRET = process.env.JWT_SECRET;
 app.use(cors());
 app.use(express.json());
 
-const authRoutes = require("./routes/authRoutes");
+const loginBarberRoutes = require("./routes/loginBarber");
+const loginClienteRoutes = require("./routes/loginCliente");
 
 // rotas
 const clientesRoutes = require("./routes/clientes");
 const servicosRoutes = require("./routes/servicos");
 const agendamentosRoutes = require("./routes/agendamentos");
-const clientePublicoRoutes = require("./routes/clientePublico");
+
 const clienteAgendamentoRoutes = require("./routes/clienteAgendamento");
 
 // middleware de autenticação
@@ -39,7 +40,7 @@ function autenticar(req, res, next) {
 
 // Aplica rotas de autenticação (públicas)
 
-app.use("/auth", authRoutes);
+app.use("/auth", loginBarberRoutes);
 
 // Aplica rotas protegidas (exigem token)
 
@@ -48,7 +49,7 @@ app.use("/servicos", servicosRoutes);
 app.use("/agendamentos", autenticar, agendamentosRoutes);
 
 // Login do cliente
-app.use("/cliente", clientePublicoRoutes);
+app.use("/cliente", loginClienteRoutes);
 app.use("/cliente/agendamento", clienteAgendamentoRoutes);
 
 // Servir os arquivos da pasta frontend

@@ -1,14 +1,14 @@
-const AuthModel = require("../models/authModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const loginBarberModel = require("../models/loginBarberModel");
 
-const AuthController = {
+const loginController = {
   registrar: async (req, res) => {
     const { nome, email, senha } = req.body;
 
     try {
       // verifica se email já existe
-      const existe = await AuthModel.buscarPorEmail(email);
+      const existe = await loginBarberModel.buscarPorEmail(email);
 
       if (existe.length > 0) {
         return res.status(400).json({ error: "Email já cadastrado" });
@@ -18,7 +18,7 @@ const AuthController = {
       const hash = await bcrypt.hash(senha, 10);
 
       // insere no banco
-      await AuthModel.registrar(nome, email, hash);
+      await loginBarberModel.registrar(nome, email, hash);
 
       res.status(201).json({ message: "Usuário registrado com sucesso!" });
     } catch (err) {
@@ -31,7 +31,7 @@ const AuthController = {
     const { email, senha } = req.body;
 
     try {
-      const rows = await AuthModel.buscarPorEmail(email);
+      const rows = await loginBarberModel.buscarPorEmail(email);
 
       if (rows.length === 0) {
         return res.status(400).json({ error: "Usuário não encontrado" });
@@ -60,4 +60,4 @@ const AuthController = {
   },
 };
 
-module.exports = AuthController;
+module.exports = loginController;

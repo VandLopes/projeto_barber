@@ -8,6 +8,14 @@ const ClientesModel = {
     return rows;
   },
 
+  buscarPorId: async (id) => {
+    const [rows] = await db.query(
+      "SELECT id, nome, email, telefone FROM clientes WHERE id = ? AND ativo = TRUE",
+      [id]
+    );
+    return rows[0] || null;
+  },
+
   criar: async ({ nome, email, telefone }) => {
     const [result] = await db.query(
       "INSERT INTO clientes (nome, email, telefone) VALUES (?, ?, ?)",

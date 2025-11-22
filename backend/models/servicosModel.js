@@ -38,6 +38,17 @@ const ServicosModel = {
     );
     return result.affectedRows;
   },
+
+  buscarNomesPorIds: async (ids) => {
+    if (!ids || ids.length === 0) return [];
+
+    const [rows] = await db.query(
+      `SELECT nome FROM servicos WHERE id IN (${ids.map(() => "?").join(",")})`,
+      ids
+    );
+
+    return rows.map((row) => row.nome);
+  },
 };
 
 module.exports = ServicosModel;

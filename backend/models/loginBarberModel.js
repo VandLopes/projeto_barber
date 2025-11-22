@@ -1,6 +1,6 @@
 const db = require("../db");
 
-const AuthModel = {
+const loginBarberModel = {
   buscarPorEmail: async (email) => {
     const [rows] = await db.query("SELECT * FROM usuarios WHERE email = ?", [
       email,
@@ -18,4 +18,4 @@ const AuthModel = {
   },
 };
 
-module.exports = AuthModel;
+module.exports = loginBarberModel;

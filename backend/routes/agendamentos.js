@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const controller = require("../controllers/agendamentosController");
+const agendamentosController = require("../controllers/agendamentosController");
 
-router.get("/horarios-livres", controller.horariosLivres);
-router.get("/eventos", controller.eventosCalendario);
-router.get("/", controller.listar);
-router.post("/", controller.criar);
-router.put("/:id", controller.editar);
-router.delete("/:id", controller.excluir);
+router.get("/horarios-livres", agendamentosController.horariosLivres);
+router.get("/eventos", agendamentosController.eventosCalendario);
+router.get("/", agendamentosController.listar);
+router.post("/", agendamentosController.criar);
+router.put("/:id", agendamentosController.editar);
+router.delete("/:id", agendamentosController.excluir);
 
 module.exports = router;

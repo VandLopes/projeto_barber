@@ -1,4 +1,4 @@
-const clientesModel = require("../models/clientesPublicoModel");
+const loginClienteModel = require("../models/loginClienteModel");
 
 module.exports = {
   async loginPublico(req, res) {
@@ -6,7 +6,7 @@ module.exports = {
 
     try {
       // procura cliente por email ou telefone
-      const cliente = await clientesModel.buscarPorEmailOuTelefone(
+      const cliente = await loginClienteModel.buscarPorEmailOuTelefone(
         email,
         telefone
       );
@@ -20,7 +20,7 @@ module.exports = {
       }
 
       // cria novo cliente caso não exista
-      const novoId = await clientesModel.criar(nome, email, telefone);
+      const novoId = await loginClienteModel.criar(nome, email, telefone);
 
       res.status(201).json({
         id: novoId,

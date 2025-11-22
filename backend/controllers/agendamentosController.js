@@ -1,17 +1,20 @@
 const agendamentosModel = require("../models/agendamentosModel");
 const agendamentoServicosModel = require("../models/agendamentoServicosModel");
-
+const enviarEmail = require("../utils/email");
 const calcularHorariosLivres = require("../utils/calcularHorariosLivres");
+const clientesModel = require("../models/clientesModel");
+const servicosModel = require("../models/servicosModel");
 
 module.exports = {
   async horariosLivres(req, res) {
     try {
       const { data, duracao, editandoId } = req.query;
 
-      if (!data || !duracao)
+      if (!data || !duracao) {
         return res
           .status(400)
           .json({ error: "Data e duração são obrigatórios." });
+      }
 
       const horarios = await calcularHorariosLivres(
         data,
@@ -46,25 +49,61 @@ module.exports = {
 
   async criar(req, res) {
     try {
-      const { data, horario, cliente_id, servicos, realizado } = req.body;
+      const clienteId = req.body.clienteId || req.body.cliente_id;
+      const { data, horario, servicos } = req.body;
 
-      if (!servicos || servicos.length === 0)
-        return res
-          .status(400)
-          .json({ error: "Selecione ao menos um serviço." });
+      if (
+        !clienteId ||
+        !data ||
+        !horario ||
+        !servicos ||
+        servicos.length === 0
+      ) {
+        return res.status(400).json({ erro: "Dados incompletos." });
+      }
 
-      const id = await agendamentosModel.criar(
-        data,
-        horario,
-        cliente_id,
-        realizado
-      );
+      const servicosIds = servicos.map(Number);
 
-      await agendamentoServicosModel.inserirVarios(id, servicos);
+      // Criar agendamento
+      const id = await agendamentosModel.criar(data, horario, clienteId, "Não");
 
-      res.status(201).json({ message: "Agendamento criado!", id });
-    } catch (err) {
-      res.status(500).json({ error: "Erro ao criar agendamento" });
+      await agendamentoServicosModel.inserirVarios(id, servicosIds);
+
+      // Buscar cliente
+      const cliente = await clientesModel.buscarPorId(clienteId);
+      if (!cliente) {
+        return res.status(404).json({ erro: "Cliente não encontrado." });
+      }
+
+      if (cliente.email) {
+        // Buscar nomes dos serviços
+        const nomesServicos = await servicosModel.buscarNomesPorIds(
+          servicosIds
+        );
+
+        const assunto = "Agendamento Confirmado! 💈";
+
+        const html = `
+        <h2>Agendamento Confirmado! 💈</h2>
+
+        <p>Olá <b>${cliente.nome}</b>, seu agendamento foi confirmado.</p>
+
+        <h3>📅 Detalhes do agendamento:</h3>
+
+        <p><b>Data:</b> ${data}</p>
+        <p><b>Horário:</b> ${horario}</p>
+        <p><b>Serviços:</b> ${nomesServicos.join(", ")}</p>
+
+        <p>Agradecemos sua preferência!</p>
+      `;
+
+        enviarEmail(cliente.email, assunto, html);
+      }
+
+      res.json({ mensagem: "Agendamento criado com sucesso!", id });
+    } catch (erro) {
+      console.error("Erro ao criar agendamento (barbeiro):", erro);
+      res.status(500).json({ erro: "Erro ao criar agendamento." });
     }
   },
 
@@ -95,8 +134,9 @@ module.exports = {
       const { id } = req.params;
 
       const removido = await agendamentosModel.excluir(id);
-      if (!removido)
+      if (!removido) {
         return res.status(404).json({ error: "Agendamento não encontrado" });
+      }
 
       res.json({ message: "Agendamento excluído!" });
     } catch (err) {
