@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const agendamentosController = require("../controllers/agendamentosController");
+const agendamentosController = require("../controllers/agendamentoController");
 
 router.get("/horarios-livres", agendamentosController.horariosLivres);
 router.get("/eventos", agendamentosController.eventosCalendario);

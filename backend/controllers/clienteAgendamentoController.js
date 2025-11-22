@@ -1,9 +1,9 @@
-const agendamentosModel = require("../models/agendamentosModel");
+const agendamentosModel = require("../models/agendamentoModel");
 const enviarEmail = require("../utils/email");
-const clientesModel = require("../models/clientesModel");
-const agendamentoServicosModel = require("../models/agendamentoServicosModel");
+const clientesModel = require("../models/clienteModel");
+const agendamentoServicosModel = require("../models/agendamentoServicoModel");
 const calcularHorariosLivres = require("../utils/calcularHorariosLivres");
-const servicosModel = require("../models/servicosModel");
+const servicosModel = require("../models/servicoModel");
 
 module.exports = {
   async listarAgendamentosPorCliente(req, res) {

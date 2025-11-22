@@ -1,4 +1,4 @@
-const ClientesModel = require("../models/clientesModel");
+const ClientesModel = require("../models/clienteModel");
 
 const ClientesController = {
   getAll: async (req, res) => {

@@ -21,7 +21,7 @@ const clientesRoutes = require("./routes/clientes");
 const servicosRoutes = require("./routes/servicos");
 const agendamentosRoutes = require("./routes/agendamentos");
 
-const clienteAgendamentoRoutes = require("./routes/clienteAgendamento");
+const clienteAgendamentoRoutes = require("./routes/clientesAgendamentos");
 
 // middleware de autenticação
 function autenticar(req, res, next) {

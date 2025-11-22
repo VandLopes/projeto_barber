@@ -1,4 +1,4 @@
-const ServicosModel = require("../models/servicosModel");
+const ServicosModel = require("../models/servicoModel");
 
 const ServicosController = {
   getPublico: async (req, res) => {
