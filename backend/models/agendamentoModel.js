@@ -68,7 +68,7 @@ module.exports = {
     return result.affectedRows;
   },
 
-  async excluir(id) {
+  async deletar(id) {
     const [result] = await db.query("DELETE FROM agendamentos WHERE id=?", [
       id,
     ]);

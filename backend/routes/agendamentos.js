@@ -7,6 +7,6 @@ router.get("/eventos", agendamentosController.eventosCalendario);
 router.get("/", agendamentosController.listar);
 router.post("/", agendamentosController.criar);
 router.put("/:id", agendamentosController.editar);
-router.delete("/:id", agendamentosController.excluir);
+router.delete("/:id", agendamentosController.deletar);
 
 module.exports = router;

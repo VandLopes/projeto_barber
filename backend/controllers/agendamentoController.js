@@ -129,7 +129,7 @@ module.exports = {
     }
   },
 
-  async excluir(req, res) {
+  async deletar(req, res) {
     try {
       const { id } = req.params;
 
