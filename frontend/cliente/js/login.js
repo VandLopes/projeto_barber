@@ -1,4 +1,4 @@
-const apiUrl = "http://localhost:3000";
+const apiUrl = "https://projeto-mrsbarber.onrender.com";
 
 document.getElementById("formCliente").addEventListener("submit", async (e) => {
   e.preventDefault();

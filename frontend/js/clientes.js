@@ -1,4 +1,4 @@
-const apiUrl = "http://localhost:3000";
+const apiUrl = "https://projeto-mrsbarber.onrender.com";
 const token = localStorage.getItem("token");
 
 // Se não estiver logado, volta pro login
