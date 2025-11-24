@@ -1,7 +1,7 @@
 const ServicosModel = require("../models/servicoModel");
 
 const ServicosController = {
-  getPublico: async (req, res) => {
+  listarPublico: async (req, res) => {
     try {
       const servicos = await ServicosModel.listarPublico();
       res.json(servicos);
@@ -11,7 +11,7 @@ const ServicosController = {
     }
   },
 
-  getAll: async (req, res) => {
+  listar: async (req, res) => {
     try {
       const servicos = await ServicosModel.listar();
       res.json(servicos);
@@ -20,7 +20,7 @@ const ServicosController = {
     }
   },
 
-  create: async (req, res) => {
+  criar: async (req, res) => {
     try {
       const id = await ServicosModel.criar(req.body);
       res.status(201).json({ message: "Serviço criado com sucesso!", id });
@@ -30,7 +30,7 @@ const ServicosController = {
     }
   },
 
-  update: async (req, res) => {
+  atualizar: async (req, res) => {
     try {
       const { id } = req.params;
       const updated = await ServicosModel.atualizar(id, req.body);
@@ -44,7 +44,7 @@ const ServicosController = {
     }
   },
 
-  delete: async (req, res) => {
+  deletar: async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await ServicosModel.desativar(id);

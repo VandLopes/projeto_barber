@@ -1,7 +1,8 @@
 const ClientesModel = require("../models/clienteModel");
+const { listar } = require("./servicoController");
 
 const ClientesController = {
-  getAll: async (req, res) => {
+  listar: async (req, res) => {
     try {
       const clientes = await ClientesModel.listar();
       res.json(clientes);
@@ -11,7 +12,7 @@ const ClientesController = {
     }
   },
 
-  create: async (req, res) => {
+  criar: async (req, res) => {
     try {
       const id = await ClientesModel.criar(req.body);
       res.status(201).json({ message: "Cliente criado com sucesso!", id });
@@ -21,7 +22,7 @@ const ClientesController = {
     }
   },
 
-  update: async (req, res) => {
+  atualizar: async (req, res) => {
     try {
       const { id } = req.params;
       const updated = await ClientesModel.atualizar(id, req.body);
@@ -37,7 +38,7 @@ const ClientesController = {
     }
   },
 
-  delete: async (req, res) => {
+  deletar: async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await ClientesModel.inativar(id);

@@ -3,12 +3,12 @@ const router = express.Router();
 const ServicosController = require("../controllers/servicoController");
 
 // Rota pública
-router.get("/publico", ServicosController.getPublico);
+router.get("/publico", ServicosController.listarPublico);
 
 // Rotas autenticadas
-router.get("/", ServicosController.getAll);
-router.post("/", ServicosController.create);
-router.put("/:id", ServicosController.update);
-router.delete("/:id", ServicosController.delete);
+router.get("/", ServicosController.listar);
+router.post("/", ServicosController.criar);
+router.put("/:id", ServicosController.atualizar);
+router.delete("/:id", ServicosController.deletar);
 
 module.exports = router;
