@@ -55,7 +55,9 @@ document.getElementById("data").addEventListener("change", async () => {
     return;
   }
 
-  const res = await fetch(`/cliente/agendamento/horarios/livres/${data}`);
+  const res = await fetch(
+    `${apiUrl}/cliente/agendamento/horarios/livres/${data}`
+  );
 
   if (!res.ok) {
     alert("Erro ao carregar horários disponíveis.");
