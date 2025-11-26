@@ -110,13 +110,14 @@ module.exports = {
   async editar(req, res) {
     try {
       const { id } = req.params;
-      const { data, horario, cliente_id, servicos, realizado } = req.body;
+      const { data, horario, servicos, realizado } = req.body;
+      const clienteId = req.body.cliente_id || req.body.clienteId;
 
       await agendamentosModel.atualizar(
         id,
         data,
         horario,
-        cliente_id,
+        clienteId,
         realizado
       );
 
@@ -125,6 +126,7 @@ module.exports = {
 
       res.json({ message: "Agendamento atualizado!" });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Erro ao editar agendamento" });
     }
   },
@@ -133,13 +135,14 @@ module.exports = {
     try {
       const { id } = req.params;
 
-      const removido = await agendamentosModel.excluir(id);
+      const removido = await agendamentosModel.deletar(id);
       if (!removido) {
         return res.status(404).json({ error: "Agendamento não encontrado" });
       }
 
       res.json({ message: "Agendamento excluído!" });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ error: "Erro ao excluir" });
     }
   },
