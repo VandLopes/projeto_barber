@@ -414,11 +414,6 @@ document
     }
   });
 
-// Listener que carrega clientes/serviços quando o modal é aberto
-document
-  .getElementById("modalAgendamento")
-  .addEventListener("show.bs.modal", carregarClientesEServicos);
-
 // Filtro de pesquisa (Tabela)
 document
   .getElementById("pesquisa")
