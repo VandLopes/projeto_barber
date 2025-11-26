@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const apiUrl = "http://localhost:3000";
+  const apiUrl = "https://projeto-mrsbarber.onrender.com";
   const token = localStorage.getItem("token");
 
   const formRelatorio = document.getElementById("formRelatorio");
