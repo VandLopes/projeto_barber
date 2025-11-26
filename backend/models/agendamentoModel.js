@@ -101,15 +101,15 @@ module.exports = {
       a.id AS numero,
       DATE_FORMAT(a.data, '%Y-%m-%d') AS data,
       SUM(s.preco) AS valor,
-      s.nome AS servico,
-      s.duracao,
+      GROUP_CONCAT(s.nome SEPARATOR ', ') AS servico,
+      SUM(s.duracao) AS duracao,
       c.nome AS cliente,
       CASE WHEN a.realizado = 'Sim' THEN 'Sim' ELSE 'Não' END AS realizado
     FROM agendamentos a
     JOIN agendamentos_servicos ags ON ags.agendamento_id = a.id
     JOIN servicos s ON s.id = ags.servico_id
     JOIN clientes c ON c.id = a.cliente_id
-    GROUP BY a.id
+    GROUP BY a.id, a.data, c.nome, a.realizado
     ORDER BY a.data DESC;
   `);
 
