@@ -1,21 +1,27 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // SSL obrigatório no Render
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // senha de app do Google
+  },
+});
 
 async function enviarEmail(to, assunto, html) {
   try {
-    const data = await resend.emails.send({
-      from: "Barbearia <vanderleilopes23.vl@gmail.com>",
+    const info = await transporter.sendMail({
+      from: `"Barbearia" <${process.env.EMAIL_USER}>`,
       to,
       subject: assunto,
       html,
     });
 
-    console.log("📧 Email enviado!", data);
-    return data;
+    console.log("📧 Email enviado:", info.messageId);
   } catch (err) {
-    console.error("❌ Erro ao enviar email:", err);
-    throw err;
+    console.error("Erro ao enviar email:", err);
   }
 }
 
