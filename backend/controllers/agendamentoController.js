@@ -144,6 +144,16 @@ module.exports = {
     }
   },
 
+  async relatorio(req, res) {
+    try {
+      const dados = await agendamentosModel.listarParaRelatorio();
+      return res.json(dados);
+    } catch (err) {
+      console.error("Erro ao gerar relatório:", err);
+      return res.status(500).json({ error: "Erro ao gerar relatório." });
+    }
+  },
+
   async eventosCalendario(req, res) {
     try {
       const eventos = await agendamentosModel.listarEventosCalendario();
