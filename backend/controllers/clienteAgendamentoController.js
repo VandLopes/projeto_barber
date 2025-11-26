@@ -31,6 +31,17 @@ module.exports = {
     try {
       const { clienteId, data, horario, servicos } = req.body;
 
+      const dataSelecionada = new Date(data);
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      dataSelecionada.setHours(0, 0, 0, 0);
+
+      if (dataSelecionada < hoje) {
+        return res
+          .status(400)
+          .json({ erro: "Data retroativa não é permitida." });
+      }
+
       if (
         !clienteId ||
         !data ||
