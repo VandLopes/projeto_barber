@@ -127,7 +127,6 @@ document.getElementById("btnConfirmar").addEventListener("click", async () => {
 
     if (res.ok) {
       alert(result.message || "Agendamento realizado com sucesso!");
-      window.location.href = "index.html";
     } else {
       alert(result.error || "Erro ao criar agendamento.");
     }
