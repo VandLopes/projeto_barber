@@ -143,6 +143,8 @@ document
   .addEventListener("submit", async (e) => {
     e.preventDefault(); // Coleta dados
 
+    carregarClientes();
+    carregarServicos();
     const cliente_id = document.getElementById("cliente").value; // 📌 CRUCIAL: Mapeia os IDs dos serviços selecionados em um array de strings
     const servicos = Array.from(
       document.getElementById("servicos").selectedOptions
@@ -413,6 +415,11 @@ document
       }
     }
   });
+
+// Listener que carrega clientes/serviços quando o modal é aberto
+document
+  .getElementById("modalAgendamento")
+  .addEventListener("show.bs.modal", carregarClientesEServicos);
 
 // Filtro de pesquisa (Tabela)
 document
